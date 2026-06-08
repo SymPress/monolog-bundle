@@ -1,0 +1,139 @@
+parameters:
+    monolog.use_microseconds: true
+    monolog.level: debug
+    monolog.profiler_level: debug
+    monolog.log_path: '%kernel.logs_dir%/%kernel.environment%.log'
+    monolog.default_additional_channels:
+        - deprecation
+        - php
+        - wordpress
+        - database
+        - http
+    monolog.default_handlers_to_channels:
+        monolog.handler.profiler: null
+        monolog.handler.main: null
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    SymPress\MonologBundle\:
+        resource: '../src/'
+        exclude:
+            - '../src/MonologBundle.php'
+            - '../src/Compiler/'
+            - '../src/DependencyInjection/'
+            - '../src/Handler/'
+            - '../src/Value/'
+
+    SymPress\MonologBundle\Value\LogRecordBuffer: ~
+
+    logger:
+        alias: monolog.logger
+        public: true
+
+    Psr\Log\LoggerInterface:
+        alias: logger
+        public: true
+
+    monolog.logger:
+        class: Monolog\Logger
+        arguments:
+            - app
+        calls:
+            - [useMicrosecondTimestamps, ['%monolog.use_microseconds%']]
+        tags:
+            - monolog.channel_logger
+        public: true
+
+    monolog.logger_prototype:
+        class: Monolog\Logger
+        arguments:
+            - app
+        abstract: true
+
+    monolog.formatter.chrome_php:
+        class: Monolog\Formatter\ChromePHPFormatter
+
+    monolog.formatter.gelf_message:
+        class: Monolog\Formatter\GelfMessageFormatter
+
+    monolog.formatter.html:
+        class: Monolog\Formatter\HtmlFormatter
+
+    monolog.formatter.json:
+        class: Monolog\Formatter\JsonFormatter
+
+    monolog.formatter.line:
+        class: Monolog\Formatter\LineFormatter
+
+    monolog.formatter.loggly:
+        class: Monolog\Formatter\LogglyFormatter
+
+    monolog.formatter.logstash:
+        class: Monolog\Formatter\LogstashFormatter
+        arguments:
+            - app
+
+    monolog.formatter.normalizer:
+        class: Monolog\Formatter\NormalizerFormatter
+
+    monolog.formatter.scalar:
+        class: Monolog\Formatter\ScalarFormatter
+
+    monolog.formatter.syslog:
+        class: Monolog\Formatter\SyslogFormatter
+
+    monolog.formatter.wildfire:
+        class: Monolog\Formatter\WildfireFormatter
+
+    monolog.handler.main:
+        class: Monolog\Handler\StreamHandler
+        arguments:
+            - '%monolog.log_path%'
+            - '%monolog.level%'
+            - true
+        calls:
+            - [pushProcessor, ['@monolog.processor.psr_log_message']]
+
+    monolog.handler.profiler:
+        class: SymPress\MonologBundle\Handler\ProfilerHandler
+        arguments:
+            - '@SymPress\MonologBundle\Value\LogRecordBuffer'
+            - '%monolog.profiler_level%'
+            - true
+        calls:
+            - [pushProcessor, ['@monolog.processor.psr_log_message']]
+
+    monolog.processor.psr_log_message:
+        class: Monolog\Processor\PsrLogMessageProcessor
+        autoconfigure: false
+
+    SymPress\MonologBundle\Processor\WordPressContextProcessor:
+        autoconfigure: false
+        tags:
+            - { name: monolog.processor, priority: -100 }
+
+    SymPress\MonologBundle\Hook\ProfilerLogBridge:
+        tags:
+            - { name: kernel.hook, hook: !php/const 'SymPress\MonologBundle\Hook\ProfilerLogBridge::FILTER_ENTRIES', method: entries, type: filter, accepted_args: 1 }
+
+    SymPress\MonologBundle\Hook\KernelErrorLogger:
+        arguments:
+            $logger: '@monolog.logger.php'
+        tags:
+            - { name: kernel.hook, hook: !php/const 'SymPress\Kernel\App::ACTION_ERROR', method: record, accepted_args: 1 }
+
+    SymPress\MonologBundle\Hook\WordPressDatabaseLogger:
+        arguments:
+            $logger: '@monolog.logger.database'
+        tags:
+            - { name: kernel.hook, hook: 'shutdown', method: record, priority: 900000 }
+
+    SymPress\MonologBundle\Hook\WordPressHttpApiLogger:
+        arguments:
+            $logger: '@monolog.logger.http'
+        tags:
+            - { name: kernel.hook, hook: 'http_api_debug', method: record, accepted_args: 5 }
