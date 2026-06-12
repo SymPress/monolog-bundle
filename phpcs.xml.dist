@@ -7,7 +7,6 @@
     <arg name="colors"/>
     <arg value="sp"/>
     <arg name="basepath" value="."/>
-    <arg name="warning-severity" value="0"/>
 
     <config name="testVersion" value="8.5-"/>
     <config name="text_domain" value="monolog-bundle"/>
@@ -18,16 +17,22 @@
     <exclude-pattern>vendor/*</exclude-pattern>
     <exclude-pattern>.phpunit.cache/*</exclude-pattern>
 
-    <rule ref="Inpsyde">
-        <exclude name="Inpsyde.CodeQuality.NoAccessors"/>
-        <exclude name="Inpsyde.CodeQuality.FunctionLength.TooLong"/>
+    <rule ref="SymPress-WordPress">
+        <exclude name="SymPress.Classes.AccessorNaming"/>
+        <exclude name="SymPress.Functions.FunctionLength.TooLong"/>
         <exclude name="Generic.Metrics.CyclomaticComplexity.MaxExceeded"/>
         <exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
         <exclude name="WordPress.PHP.DevelopmentFunctions.error_log_error_log"/>
         <exclude name="WordPress.PHP.POSIXFunctions"/>
+        <exclude name="SlevomatCodingStandard.Operators.RequireOnlyStandaloneIncrementAndDecrementOperators.PostIncrementOperatorNotUsedStandalone" />
+        <exclude name="SlevomatCodingStandard.Variables.DisallowSuperGlobalVariable.DisallowedSuperGlobalVariable" />
+        <exclude name="Squiz.PHP.GlobalKeyword.NotAllowed" />
+        <exclude name="SymPress.ControlStructures.DisallowElse.ElseFound" />
+        <exclude name="SymPress.Files.LineLength.TooLong" />
+        <exclude name="SymPress.NamingConventions.VariableName.SnakeCaseVar" />
     </rule>
 
-    <rule ref="Inpsyde.CodeQuality.Psr4">
+    <rule ref="SymPress.Namespaces.Psr4">
         <properties>
             <property name="psr4" type="array">
                 <element key="SymPress\MonologBundle" value="src"/>
