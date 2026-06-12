@@ -13,33 +13,29 @@ final class LogRecordNormalizer
     ) {
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function normalize(LogRecord $record): array
     {
         $location = $this->location($record);
 
         return [
-            'type' => 0,
-            'label' => $record->level->getName(),
-            'level' => $record->level->toPsrLogLevel(),
-            'level_name' => $record->level->getName(),
+            'type'        => 0,
+            'label'       => $record->level->getName(),
+            'level'       => $record->level->toPsrLogLevel(),
+            'level_name'  => $record->level->getName(),
             'level_value' => $record->level->value,
-            'message' => $record->message,
-            'channel' => $record->channel,
-            'context' => $this->sanitizer->sanitizeArray($record->context),
-            'extra' => $this->sanitizer->sanitizeArray($record->extra),
-            'file' => $location['file'],
-            'line' => $location['line'],
+            'message'     => $record->message,
+            'channel'     => $record->channel,
+            'context'     => $this->sanitizer->sanitizeArray($record->context),
+            'extra'       => $this->sanitizer->sanitizeArray($record->extra),
+            'file'        => $location['file'],
+            'line'        => $location['line'],
             'captured_at' => $record->datetime->format(DATE_ATOM),
-            'source' => 'monolog',
+            'source'      => 'monolog',
         ];
     }
 
-    /**
-     * @return array{file: string, line: int}
-     */
+    /** @return array{file: string, line: int} */
     private function location(LogRecord $record): array
     {
         $exception = $record->context['exception'] ?? null;
@@ -55,7 +51,7 @@ final class LogRecordNormalizer
         $line = $record->context['line'] ?? 0;
 
         return [
-            'file' => (is_scalar($file) || $file instanceof \Stringable) ? (string) $file : '',
+            'file' => is_scalar($file) || $file instanceof \Stringable ? (string) $file : '',
             'line' => is_numeric($line) ? (int) $line : 0,
         ];
     }

@@ -66,16 +66,14 @@ final class ContextSanitizer
         return is_array($sanitized) ? $sanitized : [];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function throwable(\Throwable $throwable, int $depth): array
     {
         return [
-            'class' => $throwable::class,
-            'message' => $this->truncate($throwable->getMessage()),
-            'file' => $throwable->getFile(),
-            'line' => $throwable->getLine(),
+            'class'    => $throwable::class,
+            'message'  => $this->truncate($throwable->getMessage()),
+            'file'     => $throwable->getFile(),
+            'line'     => $throwable->getLine(),
             'previous' => $throwable->getPrevious() instanceof \Throwable
                 ? $this->throwable($throwable->getPrevious(), $depth + 1)
                 : null,
