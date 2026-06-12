@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace SymPress\MonologBundle\Value;
 
-use SymPress\MonologBundle\Support\LogRecordNormalizer;
 use Monolog\LogRecord;
+use SymPress\MonologBundle\Support\LogRecordNormalizer;
 
 final class LogRecordBuffer
 {
-    /**
-     * @var list<array<string, mixed>>
-     */
+    /** @var list<array<string, mixed>> */
     private array $entries = [];
 
     public function __construct(
@@ -29,9 +27,7 @@ final class LogRecordBuffer
         $this->entries[] = $this->normalizer->normalize($record);
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
+    /** @return list<array<string, mixed>> */
     public function entries(): array
     {
         return $this->entries;
