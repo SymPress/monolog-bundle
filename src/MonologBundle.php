@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace SymPress\MonologBundle;
 
-use SymPress\Kernel\Bundle\AbstractBundle;
-use SymPress\MonologBundle\Compiler\AddProcessorsPass;
-use SymPress\MonologBundle\Compiler\ConfiguredHandlerAliasPass;
-use SymPress\MonologBundle\Compiler\LoggerChannelPass;
-use SymPress\MonologBundle\DependencyInjection\MonologExtension;
 use Monolog\Attribute\AsMonologProcessor;
 use Monolog\Attribute\WithMonologChannel;
 use Monolog\Processor\ProcessorInterface;
 use Monolog\ResettableInterface;
 use Psr\Log\LoggerAwareInterface;
+use SymPress\Kernel\Bundle\AbstractBundle;
+use SymPress\MonologBundle\Compiler\AddProcessorsPass;
+use SymPress\MonologBundle\Compiler\ConfiguredHandlerAliasPass;
+use SymPress\MonologBundle\Compiler\LoggerChannelPass;
+use SymPress\MonologBundle\DependencyInjection\MonologExtension;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
