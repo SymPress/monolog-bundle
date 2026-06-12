@@ -24,15 +24,13 @@ final class WordPressDatabaseLogger
         $this->logger->error(
             $lastError['message'],
             [
-                'query' => $lastError['query'],
+                'query'  => $lastError['query'],
                 'errors' => $lastError['errors'],
             ],
         );
     }
 
-    /**
-     * @return array{message: string, query: string, errors: mixed}|null
-     */
+    /** @return array{message: string, query: string, errors: mixed}|null */
     private function lastWpdbError(): ?array
     {
         global $EZSQL_ERROR, $wpdb;
@@ -43,8 +41,8 @@ final class WordPressDatabaseLogger
             if (is_array($last)) {
                 return [
                     'message' => is_string($last['error_str'] ?? null) ? $last['error_str'] : 'WordPress database error.',
-                    'query' => is_string($last['query'] ?? null) ? $last['query'] : '',
-                    'errors' => $EZSQL_ERROR,
+                    'query'   => is_string($last['query'] ?? null) ? $last['query'] : '',
+                    'errors'  => $EZSQL_ERROR,
                 ];
             }
         }
@@ -52,8 +50,8 @@ final class WordPressDatabaseLogger
         if (is_object($wpdb ?? null) && is_string($wpdb->last_error ?? null) && $wpdb->last_error !== '') {
             return [
                 'message' => $wpdb->last_error,
-                'query' => is_string($wpdb->last_query ?? null) ? $wpdb->last_query : '',
-                'errors' => [],
+                'query'   => is_string($wpdb->last_query ?? null) ? $wpdb->last_query : '',
+                'errors'  => [],
             ];
         }
 

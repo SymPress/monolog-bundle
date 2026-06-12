@@ -19,8 +19,8 @@ final class KernelErrorLogger
             $throwable->getMessage(),
             [
                 'exception' => $throwable,
-                'file' => $throwable->getFile(),
-                'line' => $throwable->getLine(),
+                'file'      => $throwable->getFile(),
+                'line'      => $throwable->getLine(),
             ],
         );
     }

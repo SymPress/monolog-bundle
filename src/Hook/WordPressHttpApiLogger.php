@@ -8,9 +8,6 @@ use Psr\Log\LoggerInterface;
 
 final class WordPressHttpApiLogger
 {
-    /**
-     * @var list<int>
-     */
     private const array SUCCESS_CODES = [
         200,
         201,
@@ -36,9 +33,7 @@ final class WordPressHttpApiLogger
     ) {
     }
 
-    /**
-     * @param array<string, mixed> $parsedArgs
-     */
+    /** @param array<string, mixed> $parsedArgs */
     public function record(mixed $response, string $context, string $class, array $parsedArgs, string $url): void
     {
         if ($context !== 'response') {
@@ -75,9 +70,7 @@ final class WordPressHttpApiLogger
         return class_exists('WP_Error') && $response instanceof \WP_Error;
     }
 
-    /**
-     * @param array<string, mixed> $response
-     */
+    /** @param array<string, mixed> $response */
     private function statusCode(array $response): ?int
     {
         $responseMeta = is_array($response['response'] ?? null) ? $response['response'] : [];
@@ -93,9 +86,9 @@ final class WordPressHttpApiLogger
     private function context(mixed $response, string $context, string $class, array $parsedArgs, string $url): array
     {
         $logContext = [
-            'transport' => $class,
-            'context' => $context,
-            'url' => $url,
+            'transport'    => $class,
+            'context'      => $context,
+            'url'          => $url,
             'request_args' => $this->requestArgs($parsedArgs),
         ];
 
@@ -119,9 +112,11 @@ final class WordPressHttpApiLogger
         $allowed = [];
 
         foreach (['method', 'timeout', 'redirection', 'httpversion', 'blocking'] as $key) {
-            if (array_key_exists($key, $parsedArgs)) {
-                $allowed[$key] = $parsedArgs[$key];
+            if (!array_key_exists($key, $parsedArgs)) {
+                continue;
             }
+
+            $allowed[$key] = $parsedArgs[$key];
         }
 
         return $allowed;
