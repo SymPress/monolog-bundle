@@ -29,8 +29,10 @@ final class FormatterConfigurator
             $formatter->includeStacktraces();
         }
 
-        if ($this->basePath !== null && $formatter instanceof LineFormatter) {
-            $formatter->setBasePath($this->basePath);
+        if ($this->basePath === null || !($formatter instanceof LineFormatter)) {
+            return;
         }
+
+        $formatter->setBasePath($this->basePath);
     }
 }

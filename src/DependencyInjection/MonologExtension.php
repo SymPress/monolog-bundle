@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace SymPress\MonologBundle\DependencyInjection;
 
-use SymPress\MonologBundle\Handler\ConsoleHandler;
-use SymPress\MonologBundle\Handler\FingersCrossed\HttpStatusCodeActivationStrategy;
 use Monolog\Handler\BrowserConsoleHandler;
 use Monolog\Handler\BufferHandler;
 use Monolog\Handler\ChromePHPHandler;
@@ -31,6 +29,8 @@ use Monolog\Handler\TestHandler;
 use Monolog\Handler\WhatFailureGroupHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 use Monolog\ResettableInterface;
+use SymPress\MonologBundle\Handler\ConsoleHandler;
+use SymPress\MonologBundle\Handler\FingersCrossed\HttpStatusCodeActivationStrategy;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -39,9 +39,7 @@ use Symfony\Component\DependencyInjection\Reference;
 
 final class MonologExtension extends Extension
 {
-    /**
-     * @var list<string>
-     */
+    /** @var list<string> */
     private array $nestedHandlers = [];
 
     public function getAlias(): string
@@ -49,9 +47,7 @@ final class MonologExtension extends Extension
         return 'monolog';
     }
 
-    /**
-     * @param array<int, array<string, mixed>> $configs
-     */
+    /** @param array<int, array<string, mixed>> $configs */
     public function load(array $configs, ContainerBuilder $container): void
     {
         $this->nestedHandlers = [];
@@ -90,10 +86,10 @@ final class MonologExtension extends Extension
             }
 
             $handlerEntries[] = [
-                'id' => $handlerId,
+                'id'       => $handlerId,
                 'channels' => $handler['channels'],
                 'priority' => $handler['priority'],
-                'order' => $order++,
+                'order'    => $order++,
             ];
             $this->buildHandler($container, $name, $handler);
         }
@@ -162,18 +158,18 @@ final class MonologExtension extends Extension
         $handler['type'] = strtolower((string) $type);
         $handler['enabled'] = (bool) ($handler['enabled'] ?? true);
         $handler['priority'] = is_numeric($handler['priority'] ?? null) ? (int) $handler['priority'] : 0;
-        $handler['level'] = $handler['level'] ?? 'debug';
+        $handler['level'] ??= 'debug';
         $handler['bubble'] = (bool) ($handler['bubble'] ?? true);
-        $handler['path'] = $handler['path'] ?? '%kernel.logs_dir%/%kernel.environment%.log';
+        $handler['path'] ??= '%kernel.logs_dir%/%kernel.environment%.log';
         $handler['file_permission'] = $this->filePermission($handler['file_permission'] ?? null);
         $handler['use_locking'] = (bool) ($handler['use_locking'] ?? false);
         $handler['max_files'] = is_numeric($handler['max_files'] ?? null) ? (int) $handler['max_files'] : 0;
-        $handler['filename_format'] = $handler['filename_format'] ?? '{filename}-{date}';
-        $handler['date_format'] = $handler['date_format'] ?? 'Y-m-d';
-        $handler['action_level'] = $handler['action_level'] ?? 'warning';
+        $handler['filename_format'] ??= '{filename}-{date}';
+        $handler['date_format'] ??= 'Y-m-d';
+        $handler['action_level'] ??= 'warning';
         $handler['activation_strategy'] = $this->serviceId($handler['activation_strategy'] ?? null);
         $handler['stop_buffering'] = (bool) ($handler['stop_buffering'] ?? true);
-        $handler['passthru_level'] = $handler['passthru_level'] ?? null;
+        $handler['passthru_level'] ??= null;
         $handler['buffer_size'] = is_numeric($handler['buffer_size'] ?? null) ? (int) $handler['buffer_size'] : 0;
         $handler['flush_on_overflow'] = (bool) ($handler['flush_on_overflow'] ?? false);
         $handler['handler'] = $this->serviceId($handler['handler'] ?? null);
@@ -184,22 +180,22 @@ final class MonologExtension extends Extension
         $handler['include_stacktraces'] = (bool) ($handler['include_stacktraces'] ?? false);
         $handler['base_path'] = $this->nullableString($handler['base_path'] ?? null);
         $handler['process_psr_3_messages'] = $this->normalizePsrLogProcessor($handler['process_psr_3_messages'] ?? null);
-        $handler['ident'] = $handler['ident'] ?? 'php';
-        $handler['facility'] = $handler['facility'] ?? LOG_USER;
+        $handler['ident'] ??= 'php';
+        $handler['facility'] ??= LOG_USER;
         $handler['logopts'] = is_numeric($handler['logopts'] ?? null) ? (int) $handler['logopts'] : LOG_PID;
         $handler['host'] = $this->nullableString($handler['host'] ?? null);
         $handler['port'] = is_numeric($handler['port'] ?? null) ? (int) $handler['port'] : 514;
         $handler['accepted_levels'] = $this->stringList($handler['accepted_levels'] ?? []);
-        $handler['min_level'] = $handler['min_level'] ?? 'debug';
-        $handler['max_level'] = $handler['max_level'] ?? 'emergency';
-        $handler['deduplication_level'] = $handler['deduplication_level'] ?? 'error';
+        $handler['min_level'] ??= 'debug';
+        $handler['max_level'] ??= 'emergency';
+        $handler['deduplication_level'] ??= 'error';
         $handler['time'] = is_numeric($handler['time'] ?? null) ? (int) $handler['time'] : 60;
-        $handler['store'] = $handler['store'] ?? null;
+        $handler['store'] ??= null;
         $handler['factor'] = max(1, is_numeric($handler['factor'] ?? null) ? (int) $handler['factor'] : 1);
         $handler['message_type'] = is_numeric($handler['message_type'] ?? null) ? (int) $handler['message_type'] : 0;
         $handler['connection_string'] = $this->nullableString($handler['connection_string'] ?? null);
-        $handler['timeout'] = $handler['timeout'] ?? null;
-        $handler['connection_timeout'] = $handler['connection_timeout'] ?? null;
+        $handler['timeout'] ??= null;
+        $handler['connection_timeout'] ??= null;
         $handler['persistent'] = (bool) ($handler['persistent'] ?? false);
         $handler['to_email'] = $this->emailList($handler['to_email'] ?? []);
         $handler['from_email'] = $this->nullableString($handler['from_email'] ?? null);
@@ -207,7 +203,7 @@ final class MonologExtension extends Extension
         $handler['headers'] = $this->stringList($handler['headers'] ?? []);
         $handler['webhook_url'] = $this->nullableString($handler['webhook_url'] ?? null);
         $handler['channel'] = $this->nullableString($handler['channel'] ?? null);
-        $handler['bot_name'] = $handler['bot_name'] ?? 'Monolog';
+        $handler['bot_name'] ??= 'Monolog';
         $handler['use_attachment'] = (bool) ($handler['use_attachment'] ?? true);
         $handler['use_short_attachment'] = (bool) ($handler['use_short_attachment'] ?? false);
         $handler['include_extra'] = (bool) ($handler['include_extra'] ?? false);
@@ -227,9 +223,7 @@ final class MonologExtension extends Extension
         return $handler;
     }
 
-    /**
-     * @param array<string, mixed> $handler
-     */
+    /** @param array<string, mixed> $handler */
     private function validateHandler(string $name, array $handler): void
     {
         if ($handler['type'] === 'service' && $this->serviceId($handler['id'] ?? null) === null) {
@@ -271,18 +265,18 @@ final class MonologExtension extends Extension
             throw new InvalidConfigurationException(sprintf('Monolog slackwebhook handler "%s" needs a webhook_url.', $name));
         }
 
-        if ($handler['type'] === 'filter' && $handler['accepted_levels'] !== []) {
-            if (($handler['min_level'] ?? 'debug') !== 'debug' || ($handler['max_level'] ?? 'emergency') !== 'emergency') {
-                throw new InvalidConfigurationException(
-                    sprintf('Monolog filter handler "%s" cannot combine accepted_levels with min_level/max_level.', $name),
-                );
-            }
+        if ($handler['type'] !== 'filter' || $handler['accepted_levels'] === []) {
+            return;
+        }
+
+        if (($handler['min_level'] ?? 'debug') !== 'debug' || ($handler['max_level'] ?? 'emergency') !== 'emergency') {
+            throw new InvalidConfigurationException(
+                sprintf('Monolog filter handler "%s" cannot combine accepted_levels with min_level/max_level.', $name),
+            );
         }
     }
 
-    /**
-     * @param array<string, mixed> $handler
-     */
+    /** @param array<string, mixed> $handler */
     private function buildHandler(ContainerBuilder $container, string $name, array $handler): string
     {
         $handlerId = $this->configuredHandlerId($name);
@@ -337,15 +331,14 @@ final class MonologExtension extends Extension
         return $handlerId;
     }
 
-    /**
-     * @param array<string, mixed> $handler
-     */
+    /** @param array<string, mixed> $handler */
     private function configureHandlerArguments(
         ContainerBuilder $container,
         string $handlerId,
         Definition $definition,
         array $handler,
     ): void {
+
         switch ($handler['type']) {
             case 'stream':
                 $definition->setArguments([
@@ -539,9 +532,7 @@ final class MonologExtension extends Extension
         }
     }
 
-    /**
-     * @param array<string, mixed> $handler
-     */
+    /** @param array<string, mixed> $handler */
     private function activationStrategy(ContainerBuilder $container, string $handlerId, array $handler): Reference|string
     {
         if ($handler['activation_strategy'] !== null) {
@@ -671,14 +662,14 @@ final class MonologExtension extends Extension
 
     private function markNestedHandler(string $handlerId): void
     {
-        if (!in_array($handlerId, $this->nestedHandlers, true)) {
-            $this->nestedHandlers[] = $handlerId;
+        if (in_array($handlerId, $this->nestedHandlers, true)) {
+            return;
         }
+
+        $this->nestedHandlers[] = $handlerId;
     }
 
-    /**
-     * @param array<string, mixed> $handler
-     */
+    /** @param array<string, mixed> $handler */
     private function psrLogProcessorEnabled(array $handler): bool
     {
         $processor = $handler['process_psr_3_messages'];
@@ -690,9 +681,7 @@ final class MonologExtension extends Extension
         return $handler['handler'] === null && $handler['members'] === [];
     }
 
-    /**
-     * @param array<string, mixed> $processorOptions
-     */
+    /** @param array<string, mixed> $processorOptions */
     private function psrLogMessageProcessor(ContainerBuilder $container, array $processorOptions): string
     {
         $arguments = [];
@@ -730,9 +719,7 @@ final class MonologExtension extends Extension
         return is_numeric($value) ? (int) $value : null;
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function stringList(mixed $value): array
     {
         if ($value === null || $value === false || $value === '') {
@@ -756,17 +743,17 @@ final class MonologExtension extends Extension
 
             $string = trim((string) $item);
 
-            if ($string !== '') {
-                $strings[] = $string;
+            if ($string === '') {
+                continue;
             }
+
+            $strings[] = $string;
         }
 
         return $strings;
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function emailList(mixed $value): array
     {
         return $this->stringList($value);
@@ -794,9 +781,7 @@ final class MonologExtension extends Extension
         return ltrim($id, '@');
     }
 
-    /**
-     * @return array{enabled: bool|null, date_format?: string|null, remove_used_context_fields?: bool}
-     */
+    /** @return array{enabled: bool|null, date_format?: string|null, remove_used_context_fields?: bool} */
     private function normalizePsrLogProcessor(mixed $value): array
     {
         if (is_bool($value)) {
@@ -808,8 +793,8 @@ final class MonologExtension extends Extension
         }
 
         return [
-            'enabled' => array_key_exists('enabled', $value) ? (bool) $value['enabled'] : null,
-            'date_format' => $this->nullableString($value['date_format'] ?? null),
+            'enabled'                    => array_key_exists('enabled', $value) ? (bool) $value['enabled'] : null,
+            'date_format'                => $this->nullableString($value['date_format'] ?? null),
             'remove_used_context_fields' => (bool) ($value['remove_used_context_fields'] ?? false),
         ];
     }
@@ -861,14 +846,12 @@ final class MonologExtension extends Extension
         }
 
         return [
-            'type' => $exclusive ? 'exclusive' : 'inclusive',
+            'type'     => $exclusive ? 'exclusive' : 'inclusive',
             'elements' => array_values(array_unique($normalized)),
         ];
     }
 
-    /**
-     * @return list<array{code: int, urls: list<string>}>
-     */
+    /** @return list<array{code: int, urls: list<string>}> */
     private function normalizeExcludedHttpCodes(mixed $value): array
     {
         if ($value === null || $value === false || $value === []) {
