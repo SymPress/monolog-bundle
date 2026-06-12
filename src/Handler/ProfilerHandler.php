@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace SymPress\MonologBundle\Handler;
 
-use SymPress\MonologBundle\Value\LogRecordBuffer;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
+use SymPress\MonologBundle\Value\LogRecordBuffer;
 
 final class ProfilerHandler extends AbstractProcessingHandler
 {

@@ -23,6 +23,7 @@ final class ConsoleHandler extends StreamHandler
         array $formatterOptions = [],
         private readonly bool $interactiveOnly = false,
     ) {
+
         parent::__construct(
             $this->streamFromOutput($output),
             $this->levelFromShellVerbosity($verbosityLevels),
@@ -38,8 +39,6 @@ final class ConsoleHandler extends StreamHandler
         ));
     }
 
-    /**
-     */
     public function handle(LogRecord $record): bool
     {
         if ($this->interactiveOnly && !$this->isInteractive()) {
@@ -58,34 +57,32 @@ final class ConsoleHandler extends StreamHandler
         return 'php://stderr';
     }
 
-    /**
-     * @param array<int|string, int|string|Level> $verbosityLevels
-     */
+    /** @param array<int|string, int|string|Level> $verbosityLevels */
     private function levelFromShellVerbosity(array $verbosityLevels): Level
     {
         $verbosity = (int) (getenv('SHELL_VERBOSITY') ?: 0);
         $defaultLevels = [
             -1 => 'error',
-            0 => 'warning',
-            1 => 'notice',
-            2 => 'info',
-            3 => 'debug',
+            0  => 'warning',
+            1  => 'notice',
+            2  => 'info',
+            3  => 'debug',
         ];
 
         $verbosityMap = [
-            OutputInterface::VERBOSITY_QUIET => $verbosityLevels[OutputInterface::VERBOSITY_QUIET]
+            OutputInterface::VERBOSITY_QUIET        => $verbosityLevels[OutputInterface::VERBOSITY_QUIET]
                 ?? $verbosityLevels['VERBOSITY_QUIET']
                 ?? 'error',
-            OutputInterface::VERBOSITY_NORMAL => $verbosityLevels[OutputInterface::VERBOSITY_NORMAL]
+            OutputInterface::VERBOSITY_NORMAL       => $verbosityLevels[OutputInterface::VERBOSITY_NORMAL]
                 ?? $verbosityLevels['VERBOSITY_NORMAL']
                 ?? 'warning',
-            OutputInterface::VERBOSITY_VERBOSE => $verbosityLevels[OutputInterface::VERBOSITY_VERBOSE]
+            OutputInterface::VERBOSITY_VERBOSE      => $verbosityLevels[OutputInterface::VERBOSITY_VERBOSE]
                 ?? $verbosityLevels['VERBOSITY_VERBOSE']
                 ?? 'notice',
             OutputInterface::VERBOSITY_VERY_VERBOSE => $verbosityLevels[OutputInterface::VERBOSITY_VERY_VERBOSE]
                 ?? $verbosityLevels['VERBOSITY_VERY_VERBOSE']
                 ?? 'info',
-            OutputInterface::VERBOSITY_DEBUG => $verbosityLevels[OutputInterface::VERBOSITY_DEBUG]
+            OutputInterface::VERBOSITY_DEBUG        => $verbosityLevels[OutputInterface::VERBOSITY_DEBUG]
                 ?? $verbosityLevels['VERBOSITY_DEBUG']
                 ?? 'debug',
         ];
@@ -132,9 +129,7 @@ final class ConsoleHandler extends StreamHandler
         return Level::Warning;
     }
 
-    /**
-     * @param array<string, mixed> $options
-     */
+    /** @param array<string, mixed> $options */
     private function stringOption(array $options, string $key): ?string
     {
         $value = $options[$key] ?? null;

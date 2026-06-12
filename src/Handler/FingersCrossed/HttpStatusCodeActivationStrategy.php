@@ -9,9 +9,7 @@ use Monolog\LogRecord;
 
 final class HttpStatusCodeActivationStrategy implements ActivationStrategyInterface
 {
-    /**
-     * @param list<array{code: int, urls: list<string>}> $excludedHttpCodes
-     */
+    /** @param list<array{code: int, urls: list<string>}> $excludedHttpCodes */
     public function __construct(
         private readonly array $excludedHttpCodes,
         private readonly ActivationStrategyInterface $inner,
