@@ -100,14 +100,14 @@ final class LoggerChannelPass implements CompilerPassInterface
             $container->getParameterBag()->remove('monolog.default_handlers_to_channels');
         }
 
-        if ($container->hasParameter('monolog.disabled_handlers')) {
-            $container->getParameterBag()->remove('monolog.disabled_handlers');
+        if (!$container->hasParameter('monolog.disabled_handlers')) {
+            return;
         }
+
+        $container->getParameterBag()->remove('monolog.disabled_handlers');
     }
 
-    /**
-     * @param array<string, mixed> $tag
-     */
+    /** @param array<string, mixed> $tag */
     private function channelFromTag(ContainerBuilder $container, array $tag): string
     {
         $channel = $tag['channel'] ?? '';
@@ -129,18 +129,22 @@ final class LoggerChannelPass implements CompilerPassInterface
         $definition = $container->getDefinition($serviceId);
 
         foreach ($definition->getArguments() as $index => $argument) {
-            if ($argument instanceof Reference && (string) $argument === 'logger') {
-                $definition->replaceArgument($index, $this->changeReference($argument, $loggerId));
+            if (!($argument instanceof Reference) || (string) $argument !== 'logger') {
+                continue;
             }
+
+            $definition->replaceArgument($index, $this->changeReference($argument, $loggerId));
         }
 
         $calls = $definition->getMethodCalls();
 
         foreach ($calls as $callIndex => $call) {
             foreach ($call[1] as $argumentIndex => $argument) {
-                if ($argument instanceof Reference && (string) $argument === 'logger') {
-                    $calls[$callIndex][1][$argumentIndex] = $this->changeReference($argument, $loggerId);
+                if (!($argument instanceof Reference) || (string) $argument !== 'logger') {
+                    continue;
                 }
+
+                $calls[$callIndex][1][$argumentIndex] = $this->changeReference($argument, $loggerId);
             }
         }
 
@@ -152,9 +156,7 @@ final class LoggerChannelPass implements CompilerPassInterface
         $definition->setBindings($bindings);
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function additionalChannels(ContainerBuilder $container): array
     {
         return array_values(array_unique([
@@ -163,9 +165,7 @@ final class LoggerChannelPass implements CompilerPassInterface
         ]));
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function handlersToChannels(ContainerBuilder $container): array
     {
         $normalized = $this->handlerMapParameter($container, 'monolog.default_handlers_to_channels');
@@ -183,9 +183,7 @@ final class LoggerChannelPass implements CompilerPassInterface
         return $normalized;
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function channelListParameter(ContainerBuilder $container, string $parameter): array
     {
         if (!$container->hasParameter($parameter)) {
@@ -204,9 +202,7 @@ final class LoggerChannelPass implements CompilerPassInterface
         ));
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function handlerMapParameter(ContainerBuilder $container, string $parameter): array
     {
         if (!$container->hasParameter($parameter)) {
@@ -232,9 +228,7 @@ final class LoggerChannelPass implements CompilerPassInterface
         return $normalized;
     }
 
-    /**
-     * @param array<int, string> $createdLoggers
-     */
+    /** @param array<int, string> $createdLoggers */
     private function createLogger(
         string $channel,
         string $loggerId,
@@ -286,9 +280,7 @@ final class LoggerChannelPass implements CompilerPassInterface
         return $elements !== [] ? $elements : array_values($createdLoggers);
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function configuredChannels(mixed $configuration): array
     {
         if (!is_array($configuration)) {

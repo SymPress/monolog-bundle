@@ -30,9 +30,7 @@ final class AddProcessorsPass implements CompilerPassInterface
         }
     }
 
-    /**
-     * @return list<array{id: string, tag: array<string, mixed>, priority: int, order: int}>
-     */
+    /** @return list<array{id: string, tag: array<string, mixed>, priority: int, order: int}> */
     private function processors(ContainerBuilder $container): array
     {
         $processors = [];
@@ -41,10 +39,10 @@ final class AddProcessorsPass implements CompilerPassInterface
         foreach ($container->findTaggedServiceIds('monolog.processor') as $id => $tags) {
             foreach ($tags as $tag) {
                 $processors[] = [
-                    'id' => $id,
-                    'tag' => $tag,
+                    'id'       => $id,
+                    'tag'      => $tag,
                     'priority' => is_numeric($tag['priority'] ?? null) ? (int) $tag['priority'] : 0,
-                    'order' => $order++,
+                    'order'    => $order++,
                 ];
             }
         }
@@ -109,9 +107,7 @@ final class AddProcessorsPass implements CompilerPassInterface
         return [$reference, $method];
     }
 
-    /**
-     * @param array<string, mixed> $tag
-     */
+    /** @param array<string, mixed> $tag */
     private function stringTag(array $tag, string $key): string
     {
         $value = $tag[$key] ?? '';
