@@ -14,15 +14,15 @@ final class WordPressContextProcessor implements ProcessorInterface
         $extra = $record->extra;
         $extra['wordpress'] = array_filter(
             [
-                'hook' => function_exists('current_filter') ? current_filter() : null,
+                'hook'       => function_exists('current_filter') ? current_filter() : null,
                 'doing_ajax' => $this->doingAjax(),
                 'doing_cron' => $this->doingCron(),
                 'doing_rest' => $this->doingRest(),
-                'is_admin' => function_exists('is_admin') ? is_admin() : null,
-                'user_id' => $this->userId(),
-                'site_id' => function_exists('get_current_blog_id') ? get_current_blog_id() : null,
+                'is_admin'   => function_exists('is_admin') ? is_admin() : null,
+                'user_id'    => $this->userId(),
+                'site_id'    => function_exists('get_current_blog_id') ? get_current_blog_id() : null,
                 'network_id' => function_exists('get_current_network_id') ? get_current_network_id() : null,
-                'multisite' => function_exists('is_multisite') ? is_multisite() : null,
+                'multisite'  => function_exists('is_multisite') ? is_multisite() : null,
             ],
             static fn (mixed $value): bool => $value !== null,
         );
