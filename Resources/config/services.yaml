@@ -20,13 +20,13 @@ services:
         public: false
 
     SymPress\MonologBundle\:
-        resource: '../src/'
+        resource: '../../src/'
         exclude:
-            - '../src/MonologBundle.php'
-            - '../src/Compiler/'
-            - '../src/DependencyInjection/'
-            - '../src/Handler/'
-            - '../src/Value/'
+            - '../../src/MonologBundle.php'
+            - '../../src/Compiler/'
+            - '../../src/DependencyInjection/'
+            - '../../src/Handler/'
+            - '../../src/Value/'
 
     SymPress\MonologBundle\Value\LogRecordBuffer: ~
 
@@ -53,6 +53,7 @@ services:
         arguments:
             - app
         abstract: true
+        autoconfigure: false
 
     monolog.formatter.chrome_php:
         class: Monolog\Formatter\ChromePHPFormatter

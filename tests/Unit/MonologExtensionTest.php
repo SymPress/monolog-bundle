@@ -225,7 +225,7 @@ final class MonologExtensionTest extends TestCase
 
         (new MonologBundle())->build($container);
 
-        $configDir = dirname(__DIR__, 2) . '/config';
+        $configDir = dirname(__DIR__, 2) . '/Resources/config';
         (new YamlFileLoader($container, new FileLocator($configDir), 'test'))->load('services.yaml');
 
         $siteConfigDir = sprintf('%s/config/packages', $projectDir);
