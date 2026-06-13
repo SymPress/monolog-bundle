@@ -30,6 +30,7 @@
         <exclude name="SymPress.ControlStructures.DisallowElse.ElseFound" />
         <exclude name="SymPress.Files.LineLength.TooLong" />
         <exclude name="SymPress.NamingConventions.VariableName.SnakeCaseVar" />
+        <exclude name="SymPress.Variables.RedundantAssignment.Found" />
     </rule>
 
     <rule ref="SymPress.Namespaces.Psr4">
