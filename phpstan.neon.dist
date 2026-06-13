@@ -3,4 +3,4 @@ parameters:
     paths:
         - src
     scanFiles:
-        - ../../vendor/autoload.php
+        - vendor/autoload.php
