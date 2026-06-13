@@ -243,6 +243,7 @@ final class LoggerChannelPass implements CompilerPassInterface
         $logger = new ChildDefinition('monolog.logger_prototype');
         $logger->replaceArgument(0, $channel);
         $logger->addTag('monolog.channel_logger');
+        $logger->addTag('kernel.reset', ['method' => 'reset']);
         $container->setDefinition($loggerId, $logger);
         $container->registerAliasForArgument($loggerId, LoggerInterface::class, $channel . '.logger', $channel);
         $createdLoggers[] = $channel;
