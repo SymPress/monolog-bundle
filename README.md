@@ -84,13 +84,14 @@ monolog:
 Services can request channel-specific loggers by using Monolog's
 `WithMonologChannel` attribute or the `monolog.logger` service tag.
 
+See [`docs/handlers.md`](docs/handlers.md) for the supported handler types,
+required keys, defaults, and generated service IDs.
+
 ## Development
 
 ```bash
 composer install
-composer test
-composer cs:analyze
-composer cs
+composer qa
 ```
 
 Use `composer cs:fix` to apply automatic style fixes.

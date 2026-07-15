@@ -140,6 +140,57 @@ final class MonologExtensionTest extends TestCase
         self::assertStringContainsString('Hello {name}', (string) file_get_contents($logFile));
     }
 
+    public function testDocumentedHandlerTypesCompileFromTheirMinimumConfiguration(): void
+    {
+        $handlers = [
+            'sink' => ['type' => 'null', 'nested' => true],
+            'stream' => ['type' => 'stream'],
+            'rotating' => ['type' => 'rotating_file'],
+            'fingers' => ['type' => 'fingers_crossed', 'handler' => 'sink'],
+            'filter' => ['type' => 'filter', 'handler' => 'sink'],
+            'buffer' => ['type' => 'buffer', 'handler' => 'sink'],
+            'deduplication' => ['type' => 'deduplication', 'handler' => 'sink'],
+            'sampling' => ['type' => 'sampling', 'handler' => 'sink'],
+            'group' => ['type' => 'group', 'members' => ['sink']],
+            'whatfailuregroup' => ['type' => 'whatfailuregroup', 'members' => ['sink']],
+            'fallbackgroup' => ['type' => 'fallbackgroup', 'members' => ['sink']],
+            'service' => ['type' => 'service', 'id' => 'monolog.handler.main'],
+            'syslog' => ['type' => 'syslog'],
+            'syslogudp' => ['type' => 'syslogudp', 'host' => '127.0.0.1'],
+            'console' => ['type' => 'console'],
+            'browser_console' => ['type' => 'browser_console'],
+            'chromephp' => ['type' => 'chromephp'],
+            'firephp' => ['type' => 'firephp'],
+            'test' => ['type' => 'test'],
+            'noop' => ['type' => 'noop'],
+            'error_log' => ['type' => 'error_log'],
+            'native_mailer' => [
+                'type' => 'native_mailer',
+                'to_email' => 'ops@example.test',
+                'from_email' => 'wordpress@example.test',
+                'subject' => 'WordPress log',
+            ],
+            'socket' => ['type' => 'socket', 'connection_string' => 'tcp://127.0.0.1:9999'],
+            'slackwebhook' => ['type' => 'slackwebhook', 'webhook_url' => 'https://example.test/hook'],
+        ];
+
+        $container = $this->compileContainer($this->tmpPath('monolog-handlers-project'), [
+            'handlers' => $handlers,
+        ]);
+
+        foreach (array_keys($handlers) as $name) {
+            if ($name === 'service') {
+                continue;
+            }
+
+            self::assertTrue(
+                $container->hasDefinition('monolog.configured_handler.' . $name)
+                || $container->hasAlias('monolog.configured_handler.' . $name),
+                sprintf('Handler type for "%s" was not compiled.', $name),
+            );
+        }
+    }
+
     public function testKernelRuntimeContainerKeepsMonologExtensionConfiguration(): void
     {
         $projectDir = $this->tmpPath('monolog-runtime-project');

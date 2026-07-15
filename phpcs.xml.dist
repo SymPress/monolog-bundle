@@ -33,6 +33,11 @@
         <exclude name="SymPress.Variables.RedundantAssignment.Found" />
     </rule>
 
+    <!-- The extension is intentionally a single compiler for the documented handler matrix. -->
+    <rule ref="SymPress.Classes.ClassLength.TooLong">
+        <exclude-pattern>src/DependencyInjection/MonologExtension.php</exclude-pattern>
+    </rule>
+
     <rule ref="SymPress.Namespaces.Psr4">
         <properties>
             <property name="psr4" type="array">
