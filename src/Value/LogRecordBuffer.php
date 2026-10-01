@@ -9,32 +9,37 @@ use SymPress\MonologBundle\Support\LogRecordNormalizer;
 
 final class LogRecordBuffer
 {
-    /** @var list<array<string, mixed>> */
-    private array $entries = [];
+    /** @var \SplQueue<array<string, mixed>> */
+    private \SplQueue $entries;
 
     public function __construct(
         private readonly LogRecordNormalizer $normalizer,
         private readonly int $limit = 500,
     ) {
+
+        if ($limit < 1) {
+            throw new \InvalidArgumentException('Log buffer limit must be positive.');
+        }
+        $this->entries = new \SplQueue();
     }
 
     public function record(LogRecord $record): void
     {
-        if (count($this->entries) >= $this->limit) {
-            array_shift($this->entries);
+        if ($this->entries->count() >= $this->limit) {
+            $this->entries->dequeue();
         }
 
-        $this->entries[] = $this->normalizer->normalize($record);
+        $this->entries->enqueue($this->normalizer->normalize($record));
     }
 
     /** @return list<array<string, mixed>> */
     public function entries(): array
     {
-        return $this->entries;
+        return iterator_to_array($this->entries, false);
     }
 
     public function clear(): void
     {
-        $this->entries = [];
+        $this->entries = new \SplQueue();
     }
 }

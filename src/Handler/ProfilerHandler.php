@@ -7,6 +7,7 @@ namespace SymPress\MonologBundle\Handler;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
+use SymPress\MonologBundle\Support\ProfilerCollectionGate;
 use SymPress\MonologBundle\Value\LogRecordBuffer;
 
 final class ProfilerHandler extends AbstractProcessingHandler
@@ -15,9 +16,20 @@ final class ProfilerHandler extends AbstractProcessingHandler
         private readonly LogRecordBuffer $buffer,
         int|string|Level $level = Level::Debug,
         bool $bubble = true,
+        private readonly ?ProfilerCollectionGate $gate = null,
     ) {
 
         parent::__construct($level, $bubble);
+    }
+
+    public function isHandling(LogRecord $record): bool
+    {
+        return $this->gate?->allows() === true && parent::isHandling($record);
+    }
+
+    public function handle(LogRecord $record): bool
+    {
+        return $this->gate?->allows() === true ? parent::handle($record) : false;
     }
 
     protected function write(LogRecord $record): void

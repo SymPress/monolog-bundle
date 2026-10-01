@@ -24,7 +24,7 @@ final class LogRecordNormalizer
             'level'       => $record->level->toPsrLogLevel(),
             'level_name'  => $record->level->getName(),
             'level_value' => $record->level->value,
-            'message'     => $record->message,
+            'message'     => $this->sanitizer->sanitizeText($record->message),
             'channel'     => $record->channel,
             'context'     => $this->sanitizer->sanitizeArray($record->context),
             'extra'       => $this->sanitizer->sanitizeArray($record->extra),
@@ -47,11 +47,14 @@ final class LogRecordNormalizer
             ];
         }
 
+        if (is_array($exception)) {
+            return ['file' => is_string($exception['file'] ?? null) ? $exception['file'] : '', 'line' => is_int($exception['line'] ?? null) ? $exception['line'] : 0];
+        }
         $file = $record->context['file'] ?? '';
         $line = $record->context['line'] ?? 0;
 
         return [
-            'file' => is_scalar($file) || $file instanceof \Stringable ? (string) $file : '',
+            'file' => is_scalar($file) ? (string) $file : '',
             'line' => is_numeric($line) ? (int) $line : 0,
         ];
     }

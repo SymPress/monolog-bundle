@@ -22,10 +22,9 @@ final class WordPressDatabaseLogger
         }
 
         $this->logger->error(
-            $lastError['message'],
+            'WordPress database operation failed.',
             [
-                'query'  => $lastError['query'],
-                'errors' => $lastError['errors'],
+                'diagnostic_id' => substr(hash('sha256', $lastError['message'] . $lastError['query']), 0, 16),
             ],
         );
     }

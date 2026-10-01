@@ -57,7 +57,10 @@ final readonly class ImportOrders
 
 ## Configuration
 
-The package ships with a default stream handler and a profiler buffer handler.
+The package ships with a rotating file handler (14 daily files, mode 0600 and
+locking) and a profiler buffer handler. The automatic level is debug for
+local/development/dev/test and warning otherwise. Empty/false/null logs_dir
+disables the default file sink.
 Project configuration can override handlers and channels through the Monolog
 extension.
 
@@ -99,3 +102,21 @@ Use `composer cs:fix` to apply automatic style fixes.
 ## License
 
 This package is licensed under `GPL-2.0-or-later`.
+
+## Output redaction and profiler collection
+
+Compiled loggers and processing handlers redact messages/context/extra after
+interpolation and configured processors. External non-processing handlers are
+wrapped at their logger/standard-handler references without replacing their typed
+application service. Credential fields, SQL/error context, exception messages,
+URL userinfo/query values, Bearer/Basic credentials and DSNs are scrubbed. Arrays,
+strings and exception chains are bounded; arbitrary Stringable objects are never
+invoked. Applications should still use generic event messages: a free-form secret
+with no identifying syntax cannot be reliably recognized by a redactor. Custom
+handlers must not append fresh sensitive data after receiving the sanitized record.
+
+The profiler handler consults the profiler's optional ProfileGate before running
+processors or normalizers. Missing or closed gate discards the record; authorized
+collection keeps a bounded FIFO SplQueue. Early WordPress boot stays closed until
+the existing profiler authorization lifecycle can evaluate the user. The
+`sympress_profiler_log_entries` filter and entry shape are unchanged.

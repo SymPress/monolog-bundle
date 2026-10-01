@@ -13,6 +13,28 @@ use PHPUnit\Framework\TestCase;
 
 final class LogRecordBufferTest extends TestCase
 {
+    public function testClosedGateRunsNoHandlerProcessorsAndAuthorizedGateCollects(): void
+    {
+        $buffer = new LogRecordBuffer(new LogRecordNormalizer(new ContextSanitizer()), 2);
+        $gate = new class {
+            public bool $open = false;
+            public function shouldCollect(): bool { return $this->open; }
+        };
+        $handler = new \SymPress\MonologBundle\Handler\ProfilerHandler($buffer, gate: new \SymPress\MonologBundle\Support\ProfilerCollectionGate($gate));
+        $calls = 0;
+        $handler->pushProcessor(static function (LogRecord $record) use (&$calls): LogRecord { ++$calls; return $record; });
+        $logger = new \Monolog\Logger('test', [$handler]);
+        $logger->debug('closed');
+        self::assertSame(0, $calls);
+        self::assertSame([], $buffer->entries());
+        $gate->open = true;
+        foreach (['first', 'second', 'third'] as $message) { $logger->debug($message); }
+        self::assertSame(3, $calls);
+        self::assertSame(['second', 'third'], array_column($buffer->entries(), 'message'));
+        $buffer->clear();
+        self::assertSame([], $buffer->entries());
+    }
+
     public function test_it_normalizes_monolog_records_for_profiler_storage(): void
     {
         $buffer = new LogRecordBuffer(new LogRecordNormalizer(new ContextSanitizer()));

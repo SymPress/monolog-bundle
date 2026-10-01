@@ -1,6 +1,6 @@
 parameters:
     monolog.use_microseconds: true
-    monolog.level: debug
+    monolog.level: auto
     monolog.profiler_level: debug
     monolog.log_path: '%kernel.logs_dir%/%kernel.environment%.log'
     monolog.default_additional_channels:
@@ -91,11 +91,13 @@ services:
         class: Monolog\Formatter\WildfireFormatter
 
     monolog.handler.main:
-        class: Monolog\Handler\StreamHandler
+        class: Monolog\Handler\RotatingFileHandler
+        factory: [SymPress\MonologBundle\Handler\DefaultHandlerFactory, create]
         arguments:
-            - '%monolog.log_path%'
+            - '%kernel.logs_dir%'
+            - '%kernel.environment%'
             - '%monolog.level%'
-            - true
+            - '%monolog.log_path%'
         calls:
             - [pushProcessor, ['@monolog.processor.psr_log_message']]
 
@@ -105,6 +107,7 @@ services:
             - '@SymPress\MonologBundle\Value\LogRecordBuffer'
             - '%monolog.profiler_level%'
             - true
+            - '@SymPress\MonologBundle\Support\ProfilerCollectionGate'
         calls:
             - [pushProcessor, ['@monolog.processor.psr_log_message']]
 
@@ -138,3 +141,7 @@ services:
             $logger: '@monolog.logger.http'
         tags:
             - { name: kernel.hook, hook: 'http_api_debug', method: record, accepted_args: 5 }
+
+    SymPress\MonologBundle\Support\ProfilerCollectionGate:
+        arguments:
+            $gate: '@?SymPress\Profiler\Application\ProfileGate'

@@ -16,7 +16,7 @@ final class KernelErrorLogger
     public function record(\Throwable $throwable): void
     {
         $this->logger->critical(
-            $throwable->getMessage(),
+            'Kernel operation failed.',
             [
                 'exception' => $throwable,
                 'file'      => $throwable->getFile(),
