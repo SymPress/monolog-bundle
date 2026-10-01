@@ -120,7 +120,7 @@ final class ContextSanitizer
             return '[database diagnostic redacted:' . substr(hash('sha256', $value), 0, 12) . ']';
         }
         $value = preg_replace('/\b(?:Bearer|Basic)\s+[A-Za-z0-9+\/_.=-]+/i', '[authorization redacted]', $value) ?? '[text redacted]';
-        $value = preg_replace('~([a-z][a-z0-9+.-]*://)[^\s/@]+:[^\s/@]+@~i', '$1[redacted]@', $value) ?? '[text redacted]';
+        $value = preg_replace('~([a-z][a-z0-9+.-]*://)[^\s/@]+@~i', '$1[redacted]@', $value) ?? '[text redacted]';
         $value = preg_replace_callback('~https?://[^\s<>]+~i', static function (array $match): string {
             // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Standalone processor must work before WordPress pluggable APIs.
             $parts = parse_url($match[0]);
