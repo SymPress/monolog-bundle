@@ -10,7 +10,7 @@ composer qa
 ```
 
 The package uses PHP 8.5, Monolog, Symfony DependencyInjection, PHPUnit,
-PHPStan, PHP CS Fixer, and PHPCS with the Inpsyde coding standards.
+PHPStan, PHP CS Fixer, and PHPCS with the SymPress coding standards.
 
 ## Pull Requests
 
