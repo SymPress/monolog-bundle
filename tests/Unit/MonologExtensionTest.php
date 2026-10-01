@@ -37,6 +37,75 @@ final class MonologExtensionTest extends TestCase
         $this->paths = [];
     }
 
+    public function testConfiguredHandlerOutputRedactsUrlsInterpolationSqlAndErrors(): void
+    {
+        $project = $this->tmpPath('redaction-output');
+        $file = $project . '/var/log/sensitive.log';
+        $container = $this->compileContainer($project, ['handlers' => ['main' => ['type' => 'stream', 'path' => $file, 'level' => 'debug']]]);
+        $logger = $container->get('logger');
+        $logger->warning('Fetch {url} token=messageSentinel', [
+            'url' => 'https://user:passwordSentinel@example.test/path?token=urlSentinel&customer=valueSentinel',
+            'query' => "SELECT * FROM accounts WHERE secret='sqlSentinel'",
+            'error' => 'server error errorSentinel',
+            'exception' => new \RuntimeException('exceptionSentinel'),
+            'api_key' => 'keySentinel',
+        ]);
+        $contents = (string) file_get_contents($file);
+        foreach (['passwordSentinel', 'messageSentinel', 'urlSentinel', 'valueSentinel', 'sqlSentinel', 'errorSentinel', 'exceptionSentinel', 'keySentinel'] as $sentinel) {
+            self::assertStringNotContainsString($sentinel, $contents);
+        }
+        self::assertStringContainsString('example.test/path', $contents);
+    }
+
+    public function testProductionDefaultsRotateAndSuppressDebugWithoutProfilerCollection(): void
+    {
+        $project = $this->tmpPath('production-defaults');
+        $handler = \SymPress\MonologBundle\Handler\DefaultHandlerFactory::create($project, 'production', 'auto', $project . '/app.log');
+        self::assertInstanceOf(RotatingFileHandler::class, $handler);
+        $logger = new Logger('prod', [$handler]);
+        $logger->debug('suppressed');
+        $logger->warning('visible');
+        $files = glob($project . '/app-*.log') ?: [];
+        self::assertCount(1, $files);
+        self::assertSame(0600, fileperms($files[0]) & 0777);
+        self::assertStringNotContainsString('suppressed', (string) file_get_contents($files[0]));
+        self::assertStringContainsString('visible', (string) file_get_contents($files[0]));
+    }
+
+    public function testOpaqueConfiguredServiceIsRedactedWithoutChangingItsTypedService(): void
+    {
+        $project = $this->tmpPath('opaque-output');
+        (new Filesystem())->mkdir($project);
+        $file = $project . '/opaque.log';
+        $container = $this->compileContainer($project, ['handlers' => [
+            'main' => ['type' => 'service', 'id' => OpaqueFileHandler::class],
+        ]], $file);
+        self::assertInstanceOf(OpaqueFileHandler::class, $container->get(OpaqueFileHandler::class));
+        $container->get('logger')->warning('Bearer bearerSentinel', [
+            'password' => 'opaqueSentinel', 'sql' => 'SELECT opaqueSqlSentinel',
+        ]);
+        $output = (string) file_get_contents($file);
+        foreach (['bearerSentinel', 'opaqueSentinel', 'opaqueSqlSentinel'] as $value) {
+            self::assertStringNotContainsString($value, $output);
+        }
+    }
+
+    public function testDefaultRotationRetainsFourteenFilesAndDisabledLogsDiscardRecords(): void
+    {
+        $project = $this->tmpPath('retention-output');
+        (new Filesystem())->mkdir($project);
+        for ($day = 1; $day <= 20; ++$day) {
+            file_put_contents($project . '/app-' . date('Y-m-d', strtotime('-' . $day . ' days')) . '.log', 'old');
+        }
+        $handler = \SymPress\MonologBundle\Handler\DefaultHandlerFactory::create($project, 'production', 'auto', $project . '/app.log');
+        (new Logger('rotation', [$handler]))->warning('current');
+        $handler->close();
+        self::assertCount(14, glob($project . '/app-*.log') ?: []);
+        $disabled = \SymPress\MonologBundle\Handler\DefaultHandlerFactory::create(false, 'production', 'auto', $project . '/disabled.log');
+        (new Logger('disabled', [$disabled]))->warning('discarded');
+        self::assertFileDoesNotExist($project . '/disabled.log');
+    }
+
     public function testSymfonyStyleHandlerConfigurationWritesThroughFingersCrossed(): void
     {
         $projectDir = $this->tmpPath('monolog-project');
@@ -265,7 +334,7 @@ final class MonologExtensionTest extends TestCase
     /**
      * @param array<string, mixed> $monologConfig
      */
-    private function compileContainer(string $projectDir, array $monologConfig): ContainerBuilder
+    private function compileContainer(string $projectDir, array $monologConfig, ?string $opaqueFile = null): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.project_dir', $projectDir);
@@ -275,6 +344,9 @@ final class MonologExtensionTest extends TestCase
         $container->setParameter('kernel.logs_dir', sprintf('%s/var/log', $projectDir));
 
         (new MonologBundle())->build($container);
+        if ($opaqueFile !== null) {
+            $container->register(OpaqueFileHandler::class, OpaqueFileHandler::class)->setArguments([$opaqueFile])->setPublic(true);
+        }
 
         $configDir = dirname(__DIR__, 2) . '/Resources/config';
         (new YamlFileLoader($container, new FileLocator($configDir), 'test'))->load('services.yaml');
@@ -305,4 +377,17 @@ final class MonologExtensionTest extends TestCase
     {
         return array_map(static fn (object $handler): string => $handler::class, $logger->getHandlers());
     }
+}
+
+final readonly class OpaqueFileHandler implements \Monolog\Handler\HandlerInterface
+{
+    public function __construct(private string $file) {}
+    public function isHandling(\Monolog\LogRecord $record): bool { return true; }
+    public function handle(\Monolog\LogRecord $record): bool
+    {
+        file_put_contents($this->file, json_encode($record->toArray(), JSON_THROW_ON_ERROR));
+        return false;
+    }
+    public function handleBatch(array $records): void { foreach ($records as $record) { $this->handle($record); } }
+    public function close(): void {}
 }

@@ -37,11 +37,7 @@ final class ContextSanitizer
         }
 
         if (is_string($value)) {
-            return $this->truncate($value);
-        }
-
-        if ($value instanceof \Stringable) {
-            return $this->truncate((string) $value);
+            return $this->sanitizeText($value);
         }
 
         if (is_resource($value)) {
@@ -71,11 +67,11 @@ final class ContextSanitizer
     {
         return [
             'class'    => $throwable::class,
-            'message'  => $this->truncate($throwable->getMessage()),
+            'message'  => '[exception message redacted]',
             'file'     => $throwable->getFile(),
             'line'     => $throwable->getLine(),
             'previous' => $throwable->getPrevious() instanceof \Throwable
-                ? $this->throwable($throwable->getPrevious(), $depth + 1)
+                ? $this->sanitize($throwable->getPrevious(), $depth + 1)
                 : null,
         ];
     }
@@ -108,13 +104,33 @@ final class ContextSanitizer
     {
         $normalized = strtolower($key);
 
-        foreach (['password', 'pass', 'pwd', 'nonce', 'token', 'authorization', 'cookie', 'secret'] as $fragment) {
+        foreach (['password', 'pass', 'pwd', 'nonce', 'token', 'authorization', 'cookie', 'secret', 'credential', 'api_key', 'private_key', 'dsn', 'query', 'sql', 'error'] as $fragment) {
             if (str_contains($normalized, $fragment)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    public function sanitizeText(string $value): string
+    {
+        // Keep operation names, but never emit SQL literals or server error payloads.
+        if (preg_match('/\b(?:SELECT|INSERT|UPDATE|DELETE|REPLACE)\s|SQLSTATE|\b(?:database|SQL) error\b/i', $value) === 1) {
+            return '[database diagnostic redacted:' . substr(hash('sha256', $value), 0, 12) . ']';
+        }
+        $value = preg_replace('/\b(?:Bearer|Basic)\s+[A-Za-z0-9+\/_.=-]+/i', '[authorization redacted]', $value) ?? '[text redacted]';
+        $value = preg_replace('~([a-z][a-z0-9+.-]*://)[^\s/@]+:[^\s/@]+@~i', '$1[redacted]@', $value) ?? '[text redacted]';
+        $value = preg_replace_callback('~https?://[^\s<>]+~i', static function (array $match): string {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Standalone processor must work before WordPress pluggable APIs.
+            $parts = parse_url($match[0]);
+            if (!is_array($parts) || !isset($parts['host'])) {
+                return '[url redacted]';
+            }
+            return ($parts['scheme'] ?? 'https') . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '') . ($parts['path'] ?? '') . (isset($parts['query']) ? '?[query redacted]' : '');
+        }, $value) ?? '[text redacted]';
+        $value = preg_replace('/\b(?:password|passwd|pwd|token|secret|authorization|cookie|nonce|api[_-]?key)\s*[:=]\s*(?:"[^"]*"|\'[^\']*\'|[^\s,;]+)/i', '[credential redacted]', $value) ?? '[text redacted]';
+        return $this->truncate($value);
     }
 
     private function truncate(string $value): string
