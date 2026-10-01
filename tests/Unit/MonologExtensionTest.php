@@ -50,7 +50,13 @@ final class MonologExtensionTest extends TestCase
             'exception' => new \RuntimeException('exceptionSentinel'),
             'api_key' => 'keySentinel',
         ]);
+        foreach (['redis://:redisPasswordSentinel@cache.example.test', 'mysql://databaseUserSentinel:@database.example.test', 'smtp://smtpUserSentinel@mail.example.test', 'redis://:%65ncodedPasswordSentinel@cache.example.test'] as $dsn) {
+            $logger->warning('Connection failed: ' . $dsn);
+        }
         $contents = (string) file_get_contents($file);
+        foreach (['redisPasswordSentinel', 'databaseUserSentinel', 'smtpUserSentinel', 'ncodedPasswordSentinel'] as $sentinel) {
+            self::assertStringNotContainsString($sentinel, $contents);
+        }
         foreach (['passwordSentinel', 'messageSentinel', 'urlSentinel', 'valueSentinel', 'sqlSentinel', 'errorSentinel', 'exceptionSentinel', 'keySentinel'] as $sentinel) {
             self::assertStringNotContainsString($sentinel, $contents);
         }
