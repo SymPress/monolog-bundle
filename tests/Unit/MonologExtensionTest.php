@@ -46,8 +46,8 @@ final class MonologExtensionTest extends TestCase
         $logger->warning('Fetch {url} token=messageSentinel', [
             'url' => 'https://user:passwordSentinel@example.test/path?token=urlSentinel&customer=valueSentinel',
             'query' => "SELECT * FROM accounts WHERE secret='sqlSentinel'",
-            'error' => 'server error errorSentinel',
-            'exception' => new \RuntimeException('exceptionSentinel'),
+            'error' => 'server error password=errorSentinel',
+            'exception' => new \RuntimeException('Connection failed token=exceptionSentinel'),
             'api_key' => 'keySentinel',
         ]);
         foreach (['redis://:redisPasswordSentinel@cache.example.test', 'mysql://databaseUserSentinel:@database.example.test', 'smtp://smtpUserSentinel@mail.example.test', 'redis://:%65ncodedPasswordSentinel@cache.example.test'] as $dsn) {
@@ -61,6 +61,29 @@ final class MonologExtensionTest extends TestCase
             self::assertStringNotContainsString($sentinel, $contents);
         }
         self::assertStringContainsString('example.test/path', $contents);
+    }
+
+    public function testProductionLogPreservesExceptionStackAndMasksCredentialSubstrings(): void
+    {
+        $project = $this->tmpPath('production-trace');
+        $file = $project . '/var/log/production.log';
+        $container = $this->compileContainer($project, ['handlers' => ['main' => ['type' => 'stream', 'path' => $file, 'level' => 'warning']]], environment: 'production');
+        $secret = 'productionLiteralSentinel';
+        $exception = (static fn (): \RuntimeException => new \RuntimeException("SQLSTATE[HY000] SELECT account FROM customers WHERE secret='$secret'"))();
+        $container->get('logger')->error('Checkout failed: ' . $secret . ' Authorization: Bearer headerSentinel', [
+            'api_key' => $secret,
+            'url' => 'https://user:passwordSentinel@example.test/orders?token=urlSentinel',
+            'exception' => $exception,
+            'detail' => 'Retry with ' . $secret,
+        ]);
+        $contents = (string) file_get_contents($file);
+        foreach ([$secret, 'headerSentinel', 'passwordSentinel', 'urlSentinel'] as $value) {
+            self::assertStringNotContainsString($value, $contents);
+        }
+        foreach (['Checkout failed', 'SQLSTATE[HY000]', 'SELECT account', $exception->getFile(), 'trace', 'function', 'line'] as $value) {
+            self::assertStringContainsString($value, $contents);
+        }
+        self::assertStringContainsString('Retry with [redacted]', $contents);
     }
 
     public function testProductionDefaultsRotateAndSuppressDebugWithoutProfilerCollection(): void
@@ -88,12 +111,13 @@ final class MonologExtensionTest extends TestCase
         ]], $file);
         self::assertInstanceOf(OpaqueFileHandler::class, $container->get(OpaqueFileHandler::class));
         $container->get('logger')->warning('Bearer bearerSentinel', [
-            'password' => 'opaqueSentinel', 'sql' => 'SELECT opaqueSqlSentinel',
+            'password' => 'opaqueSentinel', 'sql' => "SELECT * FROM accounts WHERE token='opaqueSqlSentinel'",
         ]);
         $output = (string) file_get_contents($file);
         foreach (['bearerSentinel', 'opaqueSentinel', 'opaqueSqlSentinel'] as $value) {
             self::assertStringNotContainsString($value, $output);
         }
+        self::assertStringContainsString('SELECT * FROM accounts', $output);
     }
 
     public function testDefaultRotationRetainsFourteenFilesAndDisabledLogsDiscardRecords(): void
@@ -340,12 +364,12 @@ final class MonologExtensionTest extends TestCase
     /**
      * @param array<string, mixed> $monologConfig
      */
-    private function compileContainer(string $projectDir, array $monologConfig, ?string $opaqueFile = null): ContainerBuilder
+    private function compileContainer(string $projectDir, array $monologConfig, ?string $opaqueFile = null, string $environment = 'test'): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setParameter('kernel.project_dir', $projectDir);
-        $container->setParameter('kernel.environment', 'test');
-        $container->setParameter('kernel.debug', true);
+        $container->setParameter('kernel.environment', $environment);
+        $container->setParameter('kernel.debug', $environment !== 'production');
         $container->setParameter('kernel.cache_dir', sprintf('%s/var/cache/test/kernel', $projectDir));
         $container->setParameter('kernel.logs_dir', sprintf('%s/var/log', $projectDir));
 

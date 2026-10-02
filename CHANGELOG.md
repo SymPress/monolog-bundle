@@ -8,4 +8,8 @@ where applicable.
 
 ## Unreleased
 
+- Mask credential and SQL literal substrings while retaining operation diagnostics.
+- Preserve exception locations, bounded argument-free stack frames and chained exceptions.
+- Mask known credentials and sensitive context values across each log record.
+
 - Initial Monolog Bundle package documentation.
