@@ -10,6 +10,31 @@ final class ContextSanitizer
     private const int MAX_ITEMS = 80;
     private const int MAX_STRING_LENGTH = 1000;
 
+    /** @param list<string> $secrets Known literal credentials, including unlabelled occurrences. */
+    public function __construct(private readonly array $secrets = [])
+    {
+    }
+
+    /** @param array<array-key, mixed> $context */
+    public function withSensitiveContext(array $context): self
+    {
+        $secrets = $this->secrets;
+        $collect = function (array $values, int $depth = 0) use (&$collect, &$secrets): void {
+            if ($depth >= self::MAX_DEPTH) {
+                return;
+            }
+            foreach (array_slice($values, 0, self::MAX_ITEMS, true) as $key => $value) {
+                if (is_string($key) && $this->shouldRedact($key) && is_string($value) && $value !== '') {
+                    $secrets[] = $value;
+                } elseif (is_array($value)) {
+                    $collect($value, $depth + 1);
+                }
+            }
+        };
+        $collect($context);
+        return new self(array_values(array_unique($secrets)));
+    }
+
     public function sanitize(mixed $value, int $depth = 0, ?string $key = null): mixed
     {
         if ($key !== null && $this->shouldRedact($key)) {
@@ -67,9 +92,13 @@ final class ContextSanitizer
     {
         return [
             'class'    => $throwable::class,
-            'message'  => '[exception message redacted]',
-            'file'     => $throwable->getFile(),
+            'message'  => $this->sanitizeText($throwable->getMessage()),
+            'file'     => $this->sanitizeText($throwable->getFile()),
             'line'     => $throwable->getLine(),
+            'trace'    => array_map(function (array $frame): array {
+                // Arguments and objects can contain credentials; retain stack locations and call names.
+                return $this->sanitizeArray(array_intersect_key($frame, array_flip(['file', 'line', 'class', 'function', 'type'])));
+            }, array_slice($throwable->getTrace(), 0, self::MAX_ITEMS)),
             'previous' => $throwable->getPrevious() instanceof \Throwable
                 ? $this->sanitize($throwable->getPrevious(), $depth + 1)
                 : null,
@@ -104,7 +133,7 @@ final class ContextSanitizer
     {
         $normalized = strtolower($key);
 
-        foreach (['password', 'pass', 'pwd', 'nonce', 'token', 'authorization', 'cookie', 'secret', 'credential', 'api_key', 'private_key', 'dsn', 'query', 'sql', 'error'] as $fragment) {
+        foreach (['password', 'pass', 'pwd', 'nonce', 'token', 'authorization', 'cookie', 'secret', 'credential', 'api_key', 'private_key', 'dsn'] as $fragment) {
             if (str_contains($normalized, $fragment)) {
                 return true;
             }
@@ -115,9 +144,24 @@ final class ContextSanitizer
 
     public function sanitizeText(string $value): string
     {
-        // Keep operation names, but never emit SQL literals or server error payloads.
+        $secrets = $this->secrets;
+        foreach (['DB_PASSWORD', 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT'] as $name) {
+            $secret = defined($name) ? constant($name) : getenv($name);
+            if (!is_string($secret) || $secret === '') {
+                continue;
+            }
+            $secrets[] = $secret;
+        }
+        usort($secrets, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
+        foreach ($secrets as $secret) {
+            if ($secret === '') {
+                continue;
+            }
+            $value = str_replace([$secret, rawurlencode($secret)], '[redacted]', $value);
+        }
+        // Preserve the SQL operation and error code while removing quoted literal values.
         if (preg_match('/\b(?:SELECT|INSERT|UPDATE|DELETE|REPLACE)\s|SQLSTATE|\b(?:database|SQL) error\b/i', $value) === 1) {
-            return '[database diagnostic redacted:' . substr(hash('sha256', $value), 0, 12) . ']';
+            $value = preg_replace('/\'(?:\'\'|\\\\.|[^\'\\\\])*\'|"(?:""|\\\\.|[^"\\\\])*"/', "'[redacted]'", $value) ?? '[text redacted]';
         }
         $value = preg_replace('/\b(?:Bearer|Basic)\s+[A-Za-z0-9+\/_.=-]+/i', '[authorization redacted]', $value) ?? '[text redacted]';
         $value = preg_replace('~([a-z][a-z0-9+.-]*://)[^\s/@]+@~i', '$1[redacted]@', $value) ?? '[text redacted]';

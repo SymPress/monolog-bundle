@@ -14,10 +14,11 @@ final readonly class RedactionProcessor
 
     public function __invoke(LogRecord $record): LogRecord
     {
+        $sanitizer = $this->sanitizer->withSensitiveContext([$record->context, $record->extra]);
         return $record->with(
-            message: $this->sanitizer->sanitizeText($record->message),
-            context: $this->sanitizer->sanitizeArray($record->context),
-            extra: $this->sanitizer->sanitizeArray($record->extra),
+            message: $sanitizer->sanitizeText($record->message),
+            context: $sanitizer->sanitizeArray($record->context),
+            extra: $sanitizer->sanitizeArray($record->extra),
         );
     }
 }

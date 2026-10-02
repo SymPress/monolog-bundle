@@ -1,5 +1,21 @@
 # Handler and DI configuration
 
+## Diagnostic redaction
+
+All configured/default handlers mask credential substrings before formatting.
+Messages retain their operation and SQL error code; quoted SQL literals, URL
+credentials/query values and authentication payloads are masked. Values supplied
+under sensitive context keys are also masked wherever they occur in that record.
+`ContextSanitizer` accepts an optional list of known literal secrets, and protects
+WordPress authentication keys/salts and `DB_PASSWORD` from constants/environment.
+Unlabelled arbitrary secrets must be supplied as known literals or sensitive
+context; the sanitizer cannot infer every application-specific credential.
+
+Exceptions retain sanitized messages, file/line and stack frame locations and call
+names, including chained exceptions. Stack arguments and objects are omitted.
+The same bounded sanitizer is used by the profiler bridge. Constructor defaults
+and handler/logger aliases are unchanged.
+
 `MonologExtension` accepts Symfony-style configuration below `monolog`. Omitting
 `type` creates a `null` handler. Handler names must be non-empty strings.
 
