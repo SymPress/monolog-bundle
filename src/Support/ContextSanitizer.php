@@ -150,7 +150,12 @@ final class ContextSanitizer
             }
         }
 
-        foreach (['password', 'pass', 'pwd', 'nonce', 'token', 'authorization', 'cookie', 'secret', 'credential', 'api_key', 'private_key', 'dsn'] as $fragment) {
+        $passKey = preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', '_', $key) ?? $key;
+        if (preg_match('/(?:^|[^a-z0-9])(?:pass|dbpass|userpass|ftppass|smtppass|sshpass)(?:$|[^a-z0-9])/i', $passKey) === 1) {
+            return true;
+        }
+
+        foreach (['password', 'passwd', 'passphrase', 'pwd', 'nonce', 'token', 'authorization', 'cookie', 'secret', 'credential', 'api_key', 'private_key', 'dsn'] as $fragment) {
             if (str_contains($normalized, $fragment)) {
                 return true;
             }

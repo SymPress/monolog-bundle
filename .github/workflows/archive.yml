@@ -19,7 +19,12 @@ permissions:
 
 jobs:
   archive:
-    uses: sympress/workflows/.github/workflows/wordpress-archive.yml@177fa0d727b278d2103052ec77c102b4a4c492a0
+    permissions:
+      contents: read
+      actions: read
+      attestations: write
+      id-token: write
+    uses: sympress/workflows/.github/workflows/wordpress-archive.yml@cd809f3986df3ea617d2d26bdf21ab69cae19c1e
     with:
       main_file: monolog-bundle.php
       package_version: ${{ github.event.inputs.version }}
@@ -28,7 +33,7 @@ jobs:
 
   archive-check:
     needs: archive
-    uses: sympress/workflows/.github/workflows/wordpress-archive-check.yml@177fa0d727b278d2103052ec77c102b4a4c492a0
+    uses: sympress/workflows/.github/workflows/wordpress-archive-check.yml@cd809f3986df3ea617d2d26bdf21ab69cae19c1e
     with:
       artifact_name: ${{ needs.archive.outputs.artifact }}
     secrets:
