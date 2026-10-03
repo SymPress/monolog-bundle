@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.1.2 — 2026-10-03
+
+- Exclude development tests, documentation and local QA configuration from WordPress artifacts so the mandatory archive check reviews shipped runtime files.
+
 ## 1.1.1 — 2026-10-03
 
 - Preserve diagnostic keys such as `bypass` and `tests_passed` without treating their values as credentials across log messages and exception traces.
