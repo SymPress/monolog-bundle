@@ -11,6 +11,12 @@ WordPress authentication keys/salts and `DB_PASSWORD` from constants/environment
 Unlabelled arbitrary secrets must be supplied as known literals or sensitive
 context; the sanitizer cannot infer every application-specific credential.
 
+The `pass` shorthand matches key components such as `DB_PASS` and `smtpPass`,
+including common compact aliases such as `dbpass` and `userpass`. Diagnostic keys
+such as `bypass` and `tests_passed` retain their values and do not add those values
+to the known secrets. Passwords, passphrases, tokens and WordPress session cookies
+remain masked, including known short credential values.
+
 Exceptions retain sanitized messages, file/line and stack frame locations and call
 names, including chained exceptions. Stack arguments and objects are omitted.
 The same bounded sanitizer is used by the profiler bridge. Constructor defaults
@@ -22,7 +28,7 @@ and handler/logger aliases are unchanged.
 ## Common keys
 
 | Key | Default | Contract |
-|---|---|---|
+| --- | --- | --- |
 | `enabled` | `true` | Disabled handlers remove the default alias and are not attached to loggers. |
 | `priority` | `0` | Lower values are attached first; equal values keep reverse declaration order. |
 | `level` | `debug` | Minimum Monolog level where the handler supports one. |
@@ -36,7 +42,7 @@ and handler/logger aliases are unchanged.
 ## Supported handler types
 
 | Type | Required keys | Type-specific keys and defaults |
-|---|---|---|
+| --- | --- | --- |
 | `stream` | — | `path=%kernel.logs_dir%/%kernel.environment%.log`, `file_permission=null`, `use_locking=false` |
 | `rotating_file` | — | stream keys plus `max_files=0`, `date_format=Y-m-d`, `filename_format={filename}-{date}` |
 | `fingers_crossed` | `handler` | `action_level=warning`, `activation_strategy`, `stop_buffering=true`, `passthru_level=null`, `buffer_size=0`, `excluded_http_codes=[]` |
@@ -115,7 +121,7 @@ characters; plugin paths to 190 safe relative characters; theme directory slugs
 to 64 identifier characters. Invalid identifiers become `[invalid]`.
 
 | Hook | Event | Additional fields |
-|---|---|---|
+| --- | --- | --- |
 | [`wp_login`](https://developer.wordpress.org/reference/hooks/wp_login/) | `login.succeeded` | confirmed `user_id` |
 | [`wp_login_failed`](https://developer.wordpress.org/reference/hooks/wp_login_failed/) | `login.failed` (`warning`) | fixed `reason` |
 | [`set_user_role`](https://developer.wordpress.org/reference/hooks/set_user_role/), `add_user_role`, `remove_user_role` | `user.role_set`, `user.role_added`, `user.role_removed` | `user_id`, role, bounded previous roles for set |
