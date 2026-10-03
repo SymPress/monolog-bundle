@@ -27,11 +27,6 @@ final class ProfilerHandler extends AbstractProcessingHandler
         return $this->gate?->allows() === true && parent::isHandling($record);
     }
 
-    public function handle(LogRecord $record): bool
-    {
-        return $this->gate?->allows() === true ? parent::handle($record) : false;
-    }
-
     protected function write(LogRecord $record): void
     {
         $this->buffer->record($record);

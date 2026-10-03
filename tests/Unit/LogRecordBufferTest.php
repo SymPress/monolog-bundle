@@ -18,7 +18,8 @@ final class LogRecordBufferTest extends TestCase
         $buffer = new LogRecordBuffer(new LogRecordNormalizer(new ContextSanitizer()), 2);
         $gate = new class {
             public bool $open = false;
-            public function shouldCollect(): bool { return $this->open; }
+            public int $calls = 0;
+            public function shouldCollect(): bool { ++$this->calls; return $this->open; }
         };
         $handler = new \SymPress\MonologBundle\Handler\ProfilerHandler($buffer, gate: new \SymPress\MonologBundle\Support\ProfilerCollectionGate($gate));
         $calls = 0;
@@ -26,12 +27,63 @@ final class LogRecordBufferTest extends TestCase
         $logger = new \Monolog\Logger('test', [$handler]);
         $logger->debug('closed');
         self::assertSame(0, $calls);
+        self::assertSame(1, $gate->calls);
         self::assertSame([], $buffer->entries());
         $gate->open = true;
         foreach (['first', 'second', 'third'] as $message) { $logger->debug($message); }
         self::assertSame(3, $calls);
+        self::assertSame(4, $gate->calls);
         self::assertSame(['second', 'third'], array_column($buffer->entries(), 'message'));
         $buffer->clear();
+        self::assertSame([], $buffer->entries());
+    }
+
+    public function testNativeHandlerChecksGateOnceAndKeepsLevelAndBubbleSemantics(): void
+    {
+        foreach ([true, false] as $bubble) {
+            $buffer = new LogRecordBuffer(new LogRecordNormalizer(new ContextSanitizer()));
+            $gate = new class {
+                public bool $open = true;
+                public int $calls = 0;
+                public function shouldCollect(): bool { ++$this->calls; return $this->open; }
+            };
+            $handler = new \SymPress\MonologBundle\Handler\ProfilerHandler($buffer, Level::Info, $bubble, new \SymPress\MonologBundle\Support\ProfilerCollectionGate($gate));
+            $calls = 0;
+            $handler->pushProcessor(static function (LogRecord $record) use (&$calls): LogRecord { ++$calls; return $record; });
+            self::assertSame(!$bubble, $handler->handle(new LogRecord(new \DateTimeImmutable(), 'test', Level::Info, 'accepted')));
+            self::assertSame(1, $gate->calls);
+            self::assertSame(1, $calls);
+            self::assertFalse($handler->handle(new LogRecord(new \DateTimeImmutable(), 'test', Level::Debug, 'below level')));
+            $gate->open = false;
+            self::assertFalse($handler->handle(new LogRecord(new \DateTimeImmutable(), 'test', Level::Info, 'unauthorized')));
+            self::assertSame(3, $gate->calls);
+            self::assertSame(1, $calls);
+            self::assertSame(['accepted'], array_column($buffer->entries(), 'message'));
+            $gate->open = true;
+            $next = new \Monolog\Handler\TestHandler();
+            (new \Monolog\Logger('test', [$handler, $next]))->info('logger');
+            self::assertSame($bubble, $next->hasInfoRecords());
+            self::assertSame(4, $gate->calls);
+            self::assertSame(['accepted', 'logger'], array_column($buffer->entries(), 'message'));
+        }
+    }
+
+    public function testLoggerProcessorCannotReuseAnEarlierAuthorizationDecision(): void
+    {
+        $buffer = new LogRecordBuffer(new LogRecordNormalizer(new ContextSanitizer()));
+        $gate = new class {
+            public bool $open = true;
+            public int $calls = 0;
+            public function shouldCollect(): bool { ++$this->calls; return $this->open; }
+        };
+        $handler = new \SymPress\MonologBundle\Handler\ProfilerHandler($buffer, gate: new \SymPress\MonologBundle\Support\ProfilerCollectionGate($gate));
+        $calls = 0;
+        $handler->pushProcessor(static function (LogRecord $record) use (&$calls): LogRecord { ++$calls; return $record; });
+        $logger = new \Monolog\Logger('test', [$handler]);
+        $logger->pushProcessor(static function (LogRecord $record) use ($gate): LogRecord { $gate->open = false; return $record; });
+        $logger->info('authorization changed');
+        self::assertSame(2, $gate->calls);
+        self::assertSame(0, $calls);
         self::assertSame([], $buffer->entries());
     }
 

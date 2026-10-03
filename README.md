@@ -120,3 +120,9 @@ processors or normalizers. Missing or closed gate discards the record; authorize
 collection keeps a bounded FIFO SplQueue. Early WordPress boot stays closed until
 the existing profiler authorization lifecycle can evaluate the user. The
 `sympress_profiler_log_entries` filter and entry shape are unchanged.
+
+Native handler processing evaluates the gate once. When a Logger has its own
+processors, Monolog may first ask whether the handler accepts the record, then
+evaluate authorization again after those processors. That separate preflight
+decision is not cached: processors cannot retain authorization after closing the
+gate. Minimum levels and bubbling retain native Monolog behavior.
