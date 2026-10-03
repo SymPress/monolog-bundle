@@ -53,6 +53,24 @@ final class MonologExtension extends Extension
         $this->nestedHandlers = [];
         $config = $this->mergeConfigs($configs);
 
+        if (array_key_exists('security_audit', $config)) {
+            $audit = $config['security_audit'];
+            if (!is_array($audit) || array_diff(array_keys($audit), ['enabled', 'path']) !== []) {
+                throw new InvalidConfigurationException('security_audit accepts only enabled and path.');
+            }
+            if (array_key_exists('enabled', $audit)) {
+                if (!is_bool($audit['enabled'])) {
+                    throw new InvalidConfigurationException('security_audit.enabled must be a boolean.');
+                }
+            }
+            if (array_key_exists('path', $audit)) {
+                if (!is_string($audit['path']) || trim($audit['path']) === '') {
+                    throw new InvalidConfigurationException('security_audit.path must be a non-empty string.');
+                }
+            }
+            $container->setParameter('monolog.security_audit.configured', $audit);
+        }
+
         if (array_key_exists('use_microseconds', $config)) {
             $container->setParameter('monolog.use_microseconds', (bool) $config['use_microseconds']);
         }

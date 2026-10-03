@@ -3,15 +3,19 @@ parameters:
     monolog.level: auto
     monolog.profiler_level: debug
     monolog.log_path: '%kernel.logs_dir%/%kernel.environment%.log'
+    monolog.security_audit.enabled: true
+    monolog.security_audit.path: '%kernel.logs_dir%/security.log'
     monolog.default_additional_channels:
         - deprecation
         - php
         - wordpress
         - database
         - http
+        - security
     monolog.default_handlers_to_channels:
         monolog.handler.profiler: null
         monolog.handler.main: null
+        monolog.handler.security_audit: [security]
 
 services:
     _defaults:
@@ -111,6 +115,15 @@ services:
         calls:
             - [pushProcessor, ['@monolog.processor.psr_log_message']]
 
+    monolog.handler.security_audit:
+        class: Monolog\Handler\RotatingFileHandler
+        factory: [SymPress\MonologBundle\Handler\DefaultHandlerFactory, create]
+        arguments:
+            - '%kernel.logs_dir%'
+            - '%kernel.environment%'
+            - info
+            - '%monolog.security_audit.path%'
+
     monolog.processor.psr_log_message:
         class: Monolog\Processor\PsrLogMessageProcessor
         autoconfigure: false
@@ -141,6 +154,21 @@ services:
             $logger: '@monolog.logger.http'
         tags:
             - { name: kernel.hook, hook: 'http_api_debug', method: record, accepted_args: 5 }
+
+    SymPress\MonologBundle\Hook\WordPressSecurityAuditLogger:
+        arguments:
+            $logger: '@monolog.logger.security'
+            $enabled: '%monolog.security_audit.enabled%'
+        tags:
+            - { name: kernel.hook, hook: wp_login, method: loginSucceeded, accepted_args: 2 }
+            - { name: kernel.hook, hook: wp_login_failed, method: loginFailed, accepted_args: 2 }
+            - { name: kernel.hook, hook: set_user_role, method: roleSet, accepted_args: 3 }
+            - { name: kernel.hook, hook: add_user_role, method: roleAdded, accepted_args: 2 }
+            - { name: kernel.hook, hook: remove_user_role, method: roleRemoved, accepted_args: 2 }
+            - { name: kernel.hook, hook: activated_plugin, method: pluginActivated, accepted_args: 2 }
+            - { name: kernel.hook, hook: deactivated_plugin, method: pluginDeactivated, accepted_args: 2 }
+            - { name: kernel.hook, hook: switch_theme, method: themeSwitched, accepted_args: 3 }
+            - { name: kernel.hook, hook: updated_option, method: optionUpdated, accepted_args: 3 }
 
     SymPress\MonologBundle\Support\ProfilerCollectionGate:
         arguments:

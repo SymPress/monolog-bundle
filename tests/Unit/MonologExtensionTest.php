@@ -19,6 +19,10 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Yaml\Yaml;
+use SymPress\MonologBundle\Hook\WordPressSecurityAuditLogger;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
 final class MonologExtensionTest extends TestCase
 {
@@ -35,6 +39,73 @@ final class MonologExtensionTest extends TestCase
 
         (new Filesystem())->remove($this->paths);
         $this->paths = [];
+    }
+
+    public function testSecurityAuditDefaultsCaptureInfoInProductionWithPrivateChannelFile(): void
+    {
+        $project = $this->tmpPath('security-audit');
+        $container = $this->compileContainer($project, [], environment: 'production');
+        $container->get(WordPressSecurityAuditLogger::class)->loginSucceeded('loginSentinel', (object) ['ID' => 42]);
+        $container->get('logger')->warning('unrelated application event');
+        $files = glob($project . '/var/log/security-*.log') ?: [];
+        self::assertCount(1, $files);
+        self::assertSame(0600, fileperms($files[0]) & 07777);
+        $contents = (string) file_get_contents($files[0]);
+        self::assertStringContainsString('security.INFO', $contents);
+        self::assertStringContainsString('login.succeeded', $contents);
+        self::assertStringContainsString('"user_id":42', $contents);
+        self::assertStringNotContainsString('loginSentinel', $contents);
+        self::assertStringNotContainsString('unrelated application event', $contents);
+        $main = glob($project . '/var/log/production-*.log') ?: [];
+        self::assertCount(1, $main);
+        self::assertStringNotContainsString('login.succeeded', (string) file_get_contents($main[0]));
+    }
+
+    public function testSecurityAuditConfigurationPathAndDisableAreApplied(): void
+    {
+        $project = $this->tmpPath('security-audit-config');
+        $file = $project . '/audit/private.log';
+        $container = $this->compileContainer($project, ['security_audit' => ['enabled' => true, 'path' => $file]]);
+        $container->get(WordPressSecurityAuditLogger::class)->optionUpdated('admin_email', 'oldSentinel', 'newSentinel');
+        self::assertCount(1, glob($project . '/audit/private-*.log') ?: []);
+        $disabled = $this->tmpPath('security-audit-disabled');
+        $container = $this->compileContainer($disabled, ['security_audit' => ['enabled' => false]]);
+        $container->get(WordPressSecurityAuditLogger::class)->loginFailed('Sentinel');
+        self::assertSame([], glob($disabled . '/var/log/security-*.log') ?: []);
+    }
+
+    public function testSecurityAuditRejectsAmbiguousConfiguration(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->compileContainer($this->tmpPath('audit-invalid'), ['security_audit' => ['enabled' => 'false']]);
+    }
+
+    public function testWordPressAuditHooksHaveExactArgumentContracts(): void
+    {
+        $config = Yaml::parseFile(dirname(__DIR__, 2) . '/Resources/config/services.yaml', Yaml::PARSE_CONSTANT);
+        $tags = $config['services'][WordPressSecurityAuditLogger::class]['tags'];
+        self::assertSame([
+            ['wp_login', 'loginSucceeded', 2], ['wp_login_failed', 'loginFailed', 2],
+            ['set_user_role', 'roleSet', 3], ['add_user_role', 'roleAdded', 2], ['remove_user_role', 'roleRemoved', 2],
+            ['activated_plugin', 'pluginActivated', 2], ['deactivated_plugin', 'pluginDeactivated', 2],
+            ['switch_theme', 'themeSwitched', 3], ['updated_option', 'optionUpdated', 3],
+        ], array_map(static fn (array $tag): array => [$tag['hook'], $tag['method'], $tag['accepted_args']], $tags));
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testCustomCookieAndAlternateCredentialKeysCannotLeakIntoFiles(): void
+    {
+        define('LOGGED_IN_COOKIE', 'custom_auth_id');
+        $project = $this->tmpPath('credential-keys');
+        $file = $project . '/sensitive.log';
+        $container = $this->compileContainer($project, ['handlers' => ['main' => ['type' => 'stream', 'path' => $file]]]);
+        $container->get('logger')->warning('Failure with sessionSentinel and keySentinel', [
+            'PHPSESSID' => 'sessionSentinel', 'custom_auth_id' => 'customSentinel', 'apiKey' => 'keySentinel',
+            'private-key' => 'privateSentinel', 'access_key' => 'accessSentinel', 'session_id' => 'otherSentinel',
+        ]);
+        self::assertStringNotContainsString('Sentinel', (string) file_get_contents($file));
+        self::assertStringContainsString('Failure with [redacted] and [redacted]', (string) file_get_contents($file));
     }
 
     public function testConfiguredHandlerOutputRedactsUrlsInterpolationSqlAndErrors(): void
@@ -380,6 +451,7 @@ final class MonologExtensionTest extends TestCase
 
         $configDir = dirname(__DIR__, 2) . '/Resources/config';
         (new YamlFileLoader($container, new FileLocator($configDir), 'test'))->load('services.yaml');
+        $container->getDefinition(WordPressSecurityAuditLogger::class)->setPublic(true);
 
         $siteConfigDir = sprintf('%s/config/packages', $projectDir);
         (new Filesystem())->mkdir($siteConfigDir);

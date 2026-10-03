@@ -60,12 +60,18 @@ if (!class_exists('WP_Error')) {
     {
         public function __construct(
             private readonly string $message,
+            private readonly string $code = 'authentication_failed',
         ) {
         }
 
         public function get_error_message(): string
         {
             return $this->message;
+        }
+
+        public function get_error_code(): string
+        {
+            return $this->code;
         }
     }
 }
