@@ -14,6 +14,7 @@ use SymPress\MonologBundle\Compiler\AddProcessorsPass;
 use SymPress\MonologBundle\Compiler\ConfiguredHandlerAliasPass;
 use SymPress\MonologBundle\Compiler\LoggerChannelPass;
 use SymPress\MonologBundle\Compiler\RedactionPass;
+use SymPress\MonologBundle\Compiler\SecurityAuditConfigurationPass;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -25,6 +26,7 @@ final class MonologBundle extends AbstractBundle
     {
         parent::build($container);
         $container->addCompilerPass(new ConfiguredHandlerAliasPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 1000);
+        $container->addCompilerPass(new SecurityAuditConfigurationPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 1000);
         $container->addCompilerPass(new LoggerChannelPass());
         $container->addCompilerPass(new AddProcessorsPass());
         $container->addCompilerPass(new RedactionPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -100);

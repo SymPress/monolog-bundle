@@ -133,6 +133,23 @@ final class ContextSanitizer
     {
         $normalized = strtolower($key);
 
+        $sessionCookie = function_exists('session_name') ? session_name() : false;
+        if ($normalized === 'phpsessid' || (is_string($sessionCookie) && $normalized === strtolower($sessionCookie))) {
+            return true;
+        }
+        foreach (['AUTH_COOKIE', 'SECURE_AUTH_COOKIE', 'LOGGED_IN_COOKIE', 'USER_COOKIE', 'PASS_COOKIE', 'RECOVERY_MODE_COOKIE'] as $constant) {
+            $cookie = defined($constant) ? constant($constant) : null;
+            if (is_string($cookie) && $normalized === strtolower($cookie)) {
+                return true;
+            }
+        }
+        $compact = str_replace(['_', '-'], '', $normalized);
+        foreach (['apikey', 'privatekey', 'accesskey', 'session'] as $fragment) {
+            if (str_contains($compact, $fragment)) {
+                return true;
+            }
+        }
+
         foreach (['password', 'pass', 'pwd', 'nonce', 'token', 'authorization', 'cookie', 'secret', 'credential', 'api_key', 'private_key', 'dsn'] as $fragment) {
             if (str_contains($normalized, $fragment)) {
                 return true;

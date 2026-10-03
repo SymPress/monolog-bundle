@@ -77,3 +77,70 @@ Defaults, formatters, WordPress hook loggers, and the public `logger` aliases li
 in `Resources/config/services.yaml`. The profiler bridge publishes normalized,
 sanitized entries through the `sympress_profiler_log_entries` WordPress filter;
 that string and payload are shared contracts with `sympress/profiler`.
+
+## WordPress security audit
+
+The public bundle supplies `monolog.logger.security` and a built-in audit recorder.
+It does not require the optional profiler or a security package. Defaults send
+the security channel to `monolog.handler.security_audit`, a separate rotating
+`%kernel.logs_dir%/security-YYYY-MM-DD.log` file at `info`, with mode `0600`, locking
+and 14 retained files. Successful logins and changes are therefore captured even
+when the production application handler starts at `warning`. The log directory
+must be private and outside HTTP access. Retention and access remain deployment
+responsibilities; this is a local operational log, not a tamper-proof ledger.
+
+```yaml
+monolog:
+    security_audit:
+        enabled: true
+        path: '%kernel.logs_dir%/security.log'
+```
+
+`enabled` is a boolean (default `true`) controlling only the built-in WordPress
+recorder. `path` is a non-empty string for the default rotating audit handler.
+The security channel remains available to application code when the recorder is
+disabled. Override the `security_audit` handler by its normal configuration name
+to route the channel elsewhere or to change retention. Disabling that handler
+removes the dedicated sink; handler/channel configuration must still capture
+`info` events if an audit trail is required. Explicit `kernel.logs_dir: false`
+continues to disable default file logging.
+
+Every record has a stable `event`, numeric `actor_id` and `site_id` (zero when
+unknown). Login success adds the confirmed `user_id`; failure adds only a fixed
+allowlisted reason, falling back to `authentication_failed` for custom errors.
+There is no lookup from the attempted identifier. Usernames, passwords, cookies,
+IP addresses, error messages/data and raw old/new option values are never inputs
+to the audit payload. Role lists are limited to 20 entries of 64 ASCII identifier
+characters; plugin paths to 190 safe relative characters; theme directory slugs
+to 64 identifier characters. Invalid identifiers become `[invalid]`.
+
+| Hook | Event | Additional fields |
+|---|---|---|
+| [`wp_login`](https://developer.wordpress.org/reference/hooks/wp_login/) | `login.succeeded` | confirmed `user_id` |
+| [`wp_login_failed`](https://developer.wordpress.org/reference/hooks/wp_login_failed/) | `login.failed` (`warning`) | fixed `reason` |
+| [`set_user_role`](https://developer.wordpress.org/reference/hooks/set_user_role/), `add_user_role`, `remove_user_role` | `user.role_set`, `user.role_added`, `user.role_removed` | `user_id`, role, bounded previous roles for set |
+| [`activated_plugin`](https://developer.wordpress.org/reference/hooks/activated_plugin/), `deactivated_plugin` | `plugin.activated`, `plugin.deactivated` | relative plugin path, `network_wide` |
+| [`switch_theme`](https://developer.wordpress.org/reference/hooks/switch_theme/) | `theme.switched` | new and previous directory slugs |
+| [`updated_option`](https://developer.wordpress.org/reference/hooks/updated_option/) | `option.updated` | allowlisted option name |
+
+The option allowlist is `siteurl`, `home`, `admin_email`, `new_admin_email`,
+`users_can_register`, `default_role`; an event records a completed change without
+its values. WordPress may emit individual add/remove role events and a set event
+for the same operation. Silent plugin changes, direct SQL/file edits and tools
+that bypass these WordPress hooks are outside this recorder's coverage.
+
+Production redaction preserves exception class, error location and stack call
+names while omitting argument/object contents and masking SQL string literals,
+known credentials and URL credentials/query data. Named credentials include
+alternate API/private/access-key spellings, PHP sessions and custom WordPress
+authentication-cookie constants. Application code must still avoid logging
+unlabelled secrets that no generic redactor can identify.
+
+For a real-core hook and DI smoke check, run
+`php tests/Integration/wordpress-security-audit.php /absolute/disposable/wp`.
+It requires an installed disposable WordPress database with an `audit-admin`
+administrator, creates/reuses fixture user/plugins/themes, changes site options,
+and suppresses mail. Never run it against an existing site. It verifies confirmed
+and failed login, roles, activations, completed option changes, private files,
+the production level split and absence of sentinel secrets through the actual
+kernel hook compiler and WordPress APIs.
