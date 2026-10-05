@@ -11,6 +11,29 @@ use SymPress\MonologBundle\Hook\WordPressSecurityAuditLogger;
 
 final class WordPressSecurityAuditLoggerTest extends TestCase
 {
+    public function testIncompleteOrMalformedPluginHookArgumentsDoNotBreakWordPress(): void
+    {
+        $handler = new TestHandler();
+        $audit = new WordPressSecurityAuditLogger(new Logger('security', [$handler]));
+        $audit->loginSucceeded('discarded-secret');
+        $audit->loginFailed();
+        $audit->roleSet([], ['discarded-secret'], new \stdClass());
+        $audit->roleAdded();
+        $audit->roleRemoved();
+        $audit->pluginActivated(['discarded-secret']);
+        $audit->pluginDeactivated();
+        $audit->themeSwitched();
+        $audit->optionUpdated('siteurl');
+        $audit->optionUpdated(['discarded-secret']);
+        $records = $handler->getRecords();
+        self::assertCount(9, $records);
+        self::assertSame(0, $records[0]->context['user_id']);
+        self::assertSame([], $records[2]->context['previous_roles']);
+        self::assertSame('[invalid]', $records[5]->context['plugin']);
+        self::assertFalse($records[5]->context['network_wide']);
+        self::assertStringNotContainsString('discarded-secret', json_encode($records, JSON_THROW_ON_ERROR));
+    }
+
     public function testEventsRetainIdsAndNeverIncludeLoginInputsOrOptionValues(): void
     {
         $handler = new TestHandler();
