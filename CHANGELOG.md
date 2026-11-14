@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.1.7 — 2026-11-14
+
+- Skip services whose class cannot be loaded in the redaction pass, for example classes that extend `WP_List_Table`, which WordPress loads only in the admin. Compiling the container no longer stops with a fatal error.
+
 ## 1.1.6 — 2026-11-14
 
 - Send the default and security audit logs to PHP's error log when the log directory cannot be written, for example in a read-only release, instead of throwing on every log call.
