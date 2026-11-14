@@ -10,8 +10,11 @@ use SymPress\Kernel\Kernel\SiteKernel;
 use SymPress\Kernel\WpContext;
 use SymPress\MonologBundle\Handler\ConsoleHandler;
 use SymPress\MonologBundle\MonologBundle;
+use Monolog\Handler\ErrorLogHandler;
 use Monolog\Handler\FingersCrossedHandler;
 use Monolog\Handler\RotatingFileHandler;
+use Monolog\Level;
+use Monolog\LogRecord;
 use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\FileLocator;
@@ -170,6 +173,24 @@ final class MonologExtensionTest extends TestCase
         self::assertSame(0600, fileperms($files[0]) & 0777);
         self::assertStringNotContainsString('suppressed', (string) file_get_contents($files[0]));
         self::assertStringContainsString('visible', (string) file_get_contents($files[0]));
+    }
+
+    public function testDefaultsFallBackToTheErrorLogWhenTheLogDirectoryIsReadOnly(): void
+    {
+        $project = $this->tmpPath('read-only-release');
+        (new Filesystem())->mkdir($project);
+        chmod($project, 0555);
+        try {
+            if (is_writable($project)) {
+                self::markTestSkipped('The test user can write to read-only directories.');
+            }
+            $handler = \SymPress\MonologBundle\Handler\DefaultHandlerFactory::create($project, 'production', 'auto', $project . '/var/log/app.log');
+            self::assertInstanceOf(ErrorLogHandler::class, $handler);
+            self::assertFalse($handler->isHandling(new LogRecord(new \DateTimeImmutable(), 'prod', Level::Debug, 'suppressed')));
+            self::assertTrue($handler->isHandling(new LogRecord(new \DateTimeImmutable(), 'prod', Level::Warning, 'visible')));
+        } finally {
+            chmod($project, 0755);
+        }
     }
 
     public function testOpaqueConfiguredServiceIsRedactedWithoutChangingItsTypedService(): void
