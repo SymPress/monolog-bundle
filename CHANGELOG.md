@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.1.6 — 2026-11-14
+
+- Send the default and security audit logs to PHP's error log when the log directory cannot be written, for example in a read-only release, instead of throwing on every log call.
+
 ## 1.1.5 — 2026-11-06
 
 - Use the Symfony 8.1.11 security patches released on November 4.
