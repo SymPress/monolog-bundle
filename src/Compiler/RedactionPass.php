@@ -26,7 +26,7 @@ final class RedactionPass implements CompilerPassInterface
         }
         $wrappers = [];
         foreach ($container->getDefinitions() as $id => $definition) {
-            $class = $definition->getClass();
+            $class = $this->loadableClass($container, $definition->getClass());
             if (is_string($class) && is_a($class, HandlerInterface::class, true) && !is_a($class, ProcessableHandlerInterface::class, true) && !$definition->isAbstract() && !str_starts_with($class, 'Monolog\\Handler\\')) {
                 $wrapper = $id . '.redacted';
                 $container->register($wrapper, RedactingHandler::class)
@@ -41,13 +41,22 @@ final class RedactionPass implements CompilerPassInterface
             $definition->setMethodCalls(array_merge([['pushProcessor', [new Reference(RedactionProcessor::class)]]], $definition->getMethodCalls()));
         }
         foreach ($container->getDefinitions() as $definition) {
-            $class = $definition->getClass();
+            $class = $this->loadableClass($container, $definition->getClass());
             if (!is_string($class) || (!is_a($class, Logger::class, true) && !str_starts_with($class, 'Monolog\\Handler\\'))) {
                 continue;
             }
             $definition->setArguments($this->replaceReferences($definition->getArguments(), $wrappers));
             $definition->setMethodCalls($this->replaceReferences($definition->getMethodCalls(), $wrappers));
         }
+    }
+
+    /**
+     * A service may extend a class that WordPress loads only for some requests, such as WP_List_Table in the admin.
+     * Autoloading it here would be a fatal error, and such a class is never a Monolog handler or logger.
+     */
+    private function loadableClass(ContainerBuilder $container, ?string $class): ?string
+    {
+        return is_string($class) && $container->getReflectionClass($class, false) !== null ? $class : null;
     }
 
     /**
