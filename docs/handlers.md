@@ -5,7 +5,12 @@
 All configured/default handlers mask credential substrings before formatting.
 Messages retain their operation and SQL error code; quoted SQL literals, URL
 credentials/query values and authentication payloads are masked. Values supplied
-under sensitive context keys are also masked wherever they occur in that record.
+under sensitive context keys are masked at their key; values of at least 8
+characters are also masked wherever they occur in that record. Line breaks in
+messages and context strings are escaped as `\r`/`\n`, so input cannot forge log
+lines even when `include_stacktraces` keeps inline line breaks. Failed WP HTTP API
+requests are logged with the request origin only, because webhook and bot URLs
+carry credentials in their path.
 `ContextSanitizer` accepts an optional list of known literal secrets, and protects
 WordPress authentication keys/salts and `DB_PASSWORD` from constants/environment.
 Unlabelled arbitrary secrets must be supplied as known literals or sensitive
