@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SymPress\MonologBundle\Tests\Unit;
 
+use Monolog\Formatter\LineFormatter;
 use Monolog\Level;
 use Monolog\LogRecord;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -75,5 +76,23 @@ final class ContextSanitizerTest extends TestCase
         $sanitizer = (new ContextSanitizer())->withSensitiveContext(['password' => 'e', 'nonce' => '203.0.1']);
         self::assertSame(['password' => '[redacted]', 'user' => 'e'], $sanitizer->sanitizeArray(['password' => 'e', 'user' => 'e']));
         self::assertSame('Login failed for alice from 203.0.113.5', $sanitizer->sanitizeText('Login failed for alice from 203.0.113.5'));
+    }
+
+    public function testLineBreaksCannotForgeEntriesWhenStackTracesAreEnabled(): void
+    {
+        $record = (new RedactionProcessor(new ContextSanitizer()))(new LogRecord(
+            datetime: new \DateTimeImmutable('2026-10-03T11:11:11+00:00'),
+            channel: 'app',
+            level: Level::Warning,
+            message: "Request failed\r\n[2026-10-03T11:11:12+00:00] app.INFO: forged",
+            context: ['detail' => "a\nb"],
+        ));
+        $formatter = new LineFormatter();
+        $formatter->includeStacktraces();
+
+        $output = $formatter->format($record);
+
+        self::assertSame(1, substr_count($output, "\n"));
+        self::assertStringContainsString('Request failed\r\n[2026-10-03T11:11:12+00:00] app.INFO: forged', $output);
     }
 }
