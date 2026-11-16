@@ -88,7 +88,7 @@ final class WordPressHttpApiLogger
         $logContext = [
             'transport'    => $class,
             'context'      => $context,
-            'url'          => $url,
+            'url'          => $this->origin($url),
             'request_args' => $this->requestArgs($parsedArgs),
         ];
 
@@ -101,6 +101,19 @@ final class WordPressHttpApiLogger
         }
 
         return $logContext;
+    }
+
+    private function origin(string $url): string
+    {
+        // Webhook and bot URLs (Slack, Discord, Telegram) carry their credential in the path.
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Plain URL split, no WordPress dependency needed.
+        $parts = parse_url($url);
+        if (!is_array($parts) || !isset($parts['host'])) {
+            return '[url redacted]';
+        }
+        $hasPath = !in_array($parts['path'] ?? '', ['', '/'], true) || isset($parts['query']);
+
+        return ($parts['scheme'] ?? 'https') . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '') . ($hasPath ? '/[path redacted]' : '');
     }
 
     /**
