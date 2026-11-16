@@ -198,7 +198,8 @@ final class ContextSanitizer
             return ($parts['scheme'] ?? 'https') . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '') . ($parts['path'] ?? '') . (isset($parts['query']) ? '?[query redacted]' : '');
         }, $value) ?? '[text redacted]';
         $value = preg_replace('/\b(?:password|passwd|pwd|token|secret|authorization|cookie|nonce|api[_-]?key)\s*[:=]\s*(?:"[^"]*"|\'[^\']*\'|[^\s,;]+)/i', '[credential redacted]', $value) ?? '[text redacted]';
-        return $this->truncate($value);
+        // Formatters with stack traces keep inline line breaks; escape them so input cannot forge log lines.
+        return $this->truncate(strtr($value, ["\r" => '\r', "\n" => '\n']));
     }
 
     private function truncate(string $value): string
