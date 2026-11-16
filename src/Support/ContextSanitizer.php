@@ -9,6 +9,8 @@ final class ContextSanitizer
     private const int MAX_DEPTH = 5;
     private const int MAX_ITEMS = 80;
     private const int MAX_STRING_LENGTH = 1000;
+    // Shorter context values stay redacted at their own key only, so they cannot erase arbitrary text.
+    private const int MIN_LITERAL_SECRET_LENGTH = 8;
 
     /** @param list<string> $secrets Known literal credentials, including unlabelled occurrences. */
     public function __construct(private readonly array $secrets = [])
@@ -24,7 +26,7 @@ final class ContextSanitizer
                 return;
             }
             foreach (array_slice($values, 0, self::MAX_ITEMS, true) as $key => $value) {
-                if (is_string($key) && $this->shouldRedact($key) && is_string($value) && $value !== '') {
+                if (is_string($key) && $this->shouldRedact($key) && is_string($value) && strlen($value) >= self::MIN_LITERAL_SECRET_LENGTH) {
                     $secrets[] = $value;
                 } elseif (is_array($value)) {
                     $collect($value, $depth + 1);
