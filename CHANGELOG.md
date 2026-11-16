@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.1.8 — 2026-11-16
+
+- Log only the origin of failed outgoing WP HTTP API requests. Slack and Discord webhook URLs and Telegram bot tokens carry their credential in the path and no longer reach the log.
+- Scrub values found under sensitive context keys from the whole record only when they have at least 8 characters. Shorter values stay redacted at their key and can no longer erase or garble other parts of the entry.
+- Escape CR and LF in messages and context strings, so input cannot forge log lines when `include_stacktraces` keeps inline line breaks.
+- Pin the shared CI workflows to `sympress/workflows` v1.3.2.
+
 ## 1.1.7 — 2026-11-14
 
 - Skip services whose class cannot be loaded in the redaction pass, for example classes that extend `WP_List_Table`, which WordPress loads only in the admin. Compiling the container no longer stops with a fatal error.
