@@ -70,10 +70,10 @@ final class ContextSanitizerTest extends TestCase
         self::assertSame('Attempt 11 with [redacted]', $sanitizer->sanitizeText('Attempt 11 with ' . $secret));
     }
 
-    public function testActualShortPasswordsRemainRedacted(): void
+    public function testShortSensitiveValuesAreRedactedOnlyAtTheirKey(): void
     {
-        $sanitizer = (new ContextSanitizer())->withSensitiveContext(['password' => '1']);
-        self::assertSame(['password' => '[redacted]'], $sanitizer->sanitizeArray(['password' => '1']));
-        self::assertSame('Password [redacted]', $sanitizer->sanitizeText('Password 1'));
+        $sanitizer = (new ContextSanitizer())->withSensitiveContext(['password' => 'e', 'nonce' => '203.0.1']);
+        self::assertSame(['password' => '[redacted]', 'user' => 'e'], $sanitizer->sanitizeArray(['password' => 'e', 'user' => 'e']));
+        self::assertSame('Login failed for alice from 203.0.113.5', $sanitizer->sanitizeText('Login failed for alice from 203.0.113.5'));
     }
 }
