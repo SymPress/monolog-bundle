@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 where applicable.
 
+## 1.1.9 — 2026-11-23
+
+- Send default and security audit log records to PHP's error log when today's log file exists but cannot be written, for example because WP-CLI or cron created it as another Unix user. Log calls no longer throw, so logins and other audited hooks keep working.
+- Mask `DB_PASSWORD`, the WordPress salts and other known secrets shorter than 8 characters only as whole words. A local `DB_PASSWORD=db` no longer garbles words like `wpdb`.
+- Mask context values under `PHP_AUTH_PW`, `PHP_AUTH_DIGEST`, WordPress reset keys (`key`, `rp_key`, `user_activation_key`), `*_KEY` names, `auth`, `jwt`, `otp`, `signature` and a key named `code`.
+- Escape ANSI escape sequences and other control characters except tab, including NEL and U+2028/U+2029, so log input cannot drive a terminal.
+- Let Dependabot update the GitHub Actions pins.
+
 ## 1.1.8 — 2026-11-16
 
 - Log only the origin of failed outgoing WP HTTP API requests. Slack and Discord webhook URLs and Telegram bot tokens carry their credential in the path and no longer reach the log.
