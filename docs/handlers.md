@@ -13,6 +13,8 @@ requests are logged with the request origin only, because webhook and bot URLs
 carry credentials in their path.
 `ContextSanitizer` accepts an optional list of known literal secrets, and protects
 WordPress authentication keys/salts and `DB_PASSWORD` from constants/environment.
+Known literals shorter than 8 characters, such as a local `DB_PASSWORD=db`, are
+masked only as whole words, so they cannot garble words like `wpdb`.
 Unlabelled arbitrary secrets must be supplied as known literals or sensitive
 context; the sanitizer cannot infer every application-specific credential.
 

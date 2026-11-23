@@ -181,7 +181,13 @@ final class ContextSanitizer
             if ($secret === '') {
                 continue;
             }
-            $value = str_replace([$secret, rawurlencode($secret)], '[redacted]', $value);
+            if (strlen($secret) >= self::MIN_LITERAL_SECRET_LENGTH) {
+                $value = str_replace([$secret, rawurlencode($secret)], '[redacted]', $value);
+                continue;
+            }
+            // A short configured value such as DDEV's DB_PASSWORD "db" would garble words like "wpdb".
+            $literals = preg_quote($secret, '/') . '|' . preg_quote(rawurlencode($secret), '/');
+            $value = preg_replace('/(?<![A-Za-z0-9_])(?:' . $literals . ')(?![A-Za-z0-9_])/', '[redacted]', $value) ?? '[text redacted]';
         }
         // Preserve the SQL operation and error code while removing quoted literal values.
         if (preg_match('/\b(?:SELECT|INSERT|UPDATE|DELETE|REPLACE)\s|SQLSTATE|\b(?:database|SQL) error\b/i', $value) === 1) {
