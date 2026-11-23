@@ -95,7 +95,7 @@ services:
         class: Monolog\Formatter\WildfireFormatter
 
     monolog.handler.main:
-        class: Monolog\Handler\RotatingFileHandler
+        class: Monolog\Handler\FallbackGroupHandler
         factory: [SymPress\MonologBundle\Handler\DefaultHandlerFactory, create]
         arguments:
             - '%kernel.logs_dir%'
@@ -116,7 +116,7 @@ services:
             - [pushProcessor, ['@monolog.processor.psr_log_message']]
 
     monolog.handler.security_audit:
-        class: Monolog\Handler\RotatingFileHandler
+        class: Monolog\Handler\FallbackGroupHandler
         factory: [SymPress\MonologBundle\Handler\DefaultHandlerFactory, create]
         arguments:
             - '%kernel.logs_dir%'

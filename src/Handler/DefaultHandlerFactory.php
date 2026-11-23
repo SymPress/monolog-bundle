@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SymPress\MonologBundle\Handler;
 
 use Monolog\Handler\ErrorLogHandler;
+use Monolog\Handler\FallbackGroupHandler;
 use Monolog\Handler\HandlerInterface;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Level;
@@ -22,9 +23,13 @@ final class DefaultHandlerFactory
         foreach (Level::cases() as $candidate) {
             if (strtolower($candidate->name) === strtolower($level)) {
                 // A read-only release directory must not turn every log call into an exception.
-                return self::isWritable(dirname($path))
-                    ? new RotatingFileHandler($path, 14, $candidate, true, 0600, true)
-                    : new ErrorLogHandler(ErrorLogHandler::OPERATING_SYSTEM, $candidate);
+                $errorLog = new ErrorLogHandler(ErrorLogHandler::OPERATING_SYSTEM, $candidate);
+                if (!self::isWritable(dirname($path))) {
+                    return $errorLog;
+                }
+
+                // Today's file may belong to another Unix user (CLI vs. PHP-FPM); fall back instead of throwing.
+                return new FallbackGroupHandler([new RotatingFileHandler($path, 14, $candidate, true, 0600, true), $errorLog]);
             }
         }
         throw new \InvalidArgumentException('Invalid default log level.');
