@@ -8,7 +8,9 @@ credentials/query values and authentication payloads are masked. Values supplied
 under sensitive context keys are masked at their key; values of at least 8
 characters are also masked wherever they occur in that record. Line breaks in
 messages and context strings are escaped as `\r`/`\n`, so input cannot forge log
-lines even when `include_stacktraces` keeps inline line breaks. Failed WP HTTP API
+lines even when `include_stacktraces` keeps inline line breaks. Other control
+characters except tab (such as ANSI escape sequences, NEL and U+2028/U+2029) are
+written as their UTF-8 bytes, for example `\x1B`, so they cannot drive a terminal. Failed WP HTTP API
 requests are logged with the request origin only, because webhook and bot URLs
 carry credentials in their path.
 `ContextSanitizer` accepts an optional list of known literal secrets, and protects

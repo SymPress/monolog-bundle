@@ -207,7 +207,13 @@ final class ContextSanitizer
         }, $value) ?? '[text redacted]';
         $value = preg_replace('/\b(?:password|passwd|pwd|token|secret|authorization|cookie|nonce|api[_-]?key)\s*[:=]\s*(?:"[^"]*"|\'[^\']*\'|[^\s,;]+)/i', '[credential redacted]', $value) ?? '[text redacted]';
         // Formatters with stack traces keep inline line breaks; escape them so input cannot forge log lines.
-        return $this->truncate(strtr($value, ["\r" => '\r', "\n" => '\n']));
+        // Other C0/C1 controls and U+2028/U+2029 (matched as UTF-8 bytes) could drive terminals or split lines.
+        $value = preg_replace_callback('/[\x00-\x08\x0A-\x1F\x7F]|\xC2[\x80-\x9F]|\xE2\x80[\xA8\xA9]/', static fn (array $match): string => match ($match[0]) {
+            "\r"    => '\r',
+            "\n"    => '\n',
+            default => '\x' . implode('\x', str_split(strtoupper(bin2hex($match[0])), 2)),
+        }, $value) ?? '[text redacted]';
+        return $this->truncate($value);
     }
 
     private function truncate(string $value): string

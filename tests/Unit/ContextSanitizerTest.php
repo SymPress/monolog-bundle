@@ -115,4 +115,11 @@ final class ContextSanitizerTest extends TestCase
         self::assertSame(1, substr_count($output, "\n"));
         self::assertStringContainsString('Request failed\r\n[2026-10-03T11:11:12+00:00] app.INFO: forged', $output);
     }
+
+    public function testControlCharactersAreEscapedButTabsAndUnicodeTextRemain(): void
+    {
+        $text = (new ContextSanitizer())->sanitizeText("\e[31mred\e[0m\tä€ NEL\u{85}LS\u{2028}PS\u{2029}DEL\x7F");
+
+        self::assertSame('\x1B[31mred\x1B[0m' . "\tä€ NEL" . '\xC2\x85LS\xE2\x80\xA8PS\xE2\x80\xA9DEL\x7F', $text);
+    }
 }
