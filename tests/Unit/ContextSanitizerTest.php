@@ -57,7 +57,7 @@ final class ContextSanitizerTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function credentialKeys(): iterable
     {
-        foreach (['pass', 'DB_PASS', 'user_pass', 'smtpPass', 'ftp-pass', 'dbpass', 'userpass', 'password', 'dbPassword', 'passwd', 'passphrase', 'ssh_passphrase', 'token', 'api_token', 'PHPSESSID'] as $key) {
+        foreach (['pass', 'DB_PASS', 'user_pass', 'smtpPass', 'ftp-pass', 'dbpass', 'userpass', 'password', 'dbPassword', 'passwd', 'passphrase', 'ssh_passphrase', 'token', 'api_token', 'PHPSESSID', 'PHP_AUTH_PW', 'PHP_AUTH_DIGEST', 'auth', 'key', 'rp_key', 'user_activation_key', 'ENCRYPTION_KEY', 'signingKey', 'jwt', 'signature', 'otp', 'code'] as $key) {
             yield $key => [$key];
         }
     }
@@ -69,6 +69,12 @@ final class ContextSanitizerTest extends TestCase
         $sanitizer = (new ContextSanitizer())->withSensitiveContext([$key => $secret]);
         self::assertSame([$key => '[redacted]'], $sanitizer->sanitizeArray([$key => $secret]));
         self::assertSame('Attempt 11 with [redacted]', $sanitizer->sanitizeText('Attempt 11 with ' . $secret));
+    }
+
+    public function testDiagnosticKeysResemblingCredentialNamesKeepTheirValues(): void
+    {
+        $context = ['status_code' => 503, 'error_code' => 'http_request_failed', 'author' => 'alice', 'keyword' => 'checkout', 'monkey' => 'patch'];
+        self::assertSame($context, (new ContextSanitizer())->sanitizeArray($context));
     }
 
     public function testShortSensitiveValuesAreRedactedOnlyAtTheirKey(): void

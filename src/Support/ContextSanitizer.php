@@ -153,7 +153,9 @@ final class ContextSanitizer
         }
 
         $passKey = preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', '_', $key) ?? $key;
-        if (preg_match('/(?:^|[^a-z0-9])(?:pass|dbpass|userpass|ftppass|smtppass|sshpass)(?:$|[^a-z0-9])/i', $passKey) === 1) {
+        // Whole components only: `key` covers rp_key and ENCRYPTION_KEY but not keyword; `auth` skips author.
+        // `code` only as the full key (OAuth/reset codes), so status_code and error_code stay readable.
+        if (preg_match('/(?:^|[^a-z0-9])(?:pass|dbpass|userpass|ftppass|smtppass|sshpass|pw|auth|key|jwt|otp|signature)(?:$|[^a-z0-9])|^code$/i', $passKey) === 1) {
             return true;
         }
 
