@@ -11,6 +11,7 @@ use SymPress\Kernel\WpContext;
 use SymPress\MonologBundle\Handler\ConsoleHandler;
 use SymPress\MonologBundle\MonologBundle;
 use Monolog\Handler\ErrorLogHandler;
+use Monolog\Handler\FallbackGroupHandler;
 use Monolog\Handler\FingersCrossedHandler;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Level;
@@ -164,7 +165,7 @@ final class MonologExtensionTest extends TestCase
     {
         $project = $this->tmpPath('production-defaults');
         $handler = \SymPress\MonologBundle\Handler\DefaultHandlerFactory::create($project, 'production', 'auto', $project . '/app.log');
-        self::assertInstanceOf(RotatingFileHandler::class, $handler);
+        self::assertInstanceOf(FallbackGroupHandler::class, $handler);
         $logger = new Logger('prod', [$handler]);
         $logger->debug('suppressed');
         $logger->warning('visible');
@@ -190,6 +191,28 @@ final class MonologExtensionTest extends TestCase
             self::assertTrue($handler->isHandling(new LogRecord(new \DateTimeImmutable(), 'prod', Level::Warning, 'visible')));
         } finally {
             chmod($project, 0755);
+        }
+    }
+
+    public function testDefaultsFallBackToTheErrorLogWhenTodaysFileIsNotWritable(): void
+    {
+        $project = $this->tmpPath('foreign-daily-file');
+        (new Filesystem())->mkdir($project);
+        // Another Unix user created today's file first; mode 0600 locks everyone else out.
+        $daily = $project . '/app-' . date('Y-m-d') . '.log';
+        file_put_contents($daily, '');
+        chmod($daily, 0400);
+        $errorLog = $project . '/php-error.log';
+        $previousErrorLog = ini_set('error_log', $errorLog);
+        try {
+            if (is_writable($daily)) {
+                self::markTestSkipped('The test user can write to read-only files.');
+            }
+            $handler = \SymPress\MonologBundle\Handler\DefaultHandlerFactory::create($project, 'production', 'auto', $project . '/app.log');
+            (new Logger('prod', [$handler]))->warning('visible');
+            self::assertStringContainsString('visible', (string) file_get_contents($errorLog));
+        } finally {
+            ini_set('error_log', (string) $previousErrorLog);
         }
     }
 
