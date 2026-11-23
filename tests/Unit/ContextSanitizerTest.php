@@ -78,6 +78,20 @@ final class ContextSanitizerTest extends TestCase
         self::assertSame('Login failed for alice from 203.0.113.5', $sanitizer->sanitizeText('Login failed for alice from 203.0.113.5'));
     }
 
+    public function testShortDatabasePasswordIsRedactedOnlyAsAWholeWord(): void
+    {
+        putenv('DB_PASSWORD=db');
+        try {
+            $sanitizer = new ContextSanitizer();
+            self::assertSame('wpdb error in dbDelta at class-wpdb.php', $sanitizer->sanitizeText('wpdb error in dbDelta at class-wpdb.php'));
+            self::assertSame('Login as root with [redacted] failed', $sanitizer->sanitizeText('Login as root with db failed'));
+            putenv('DB_PASSWORD=longDatabaseSentinel');
+            self::assertSame('x[redacted]y', $sanitizer->sanitizeText('xlongDatabaseSentinely'));
+        } finally {
+            putenv('DB_PASSWORD');
+        }
+    }
+
     public function testLineBreaksCannotForgeEntriesWhenStackTracesAreEnabled(): void
     {
         $record = (new RedactionProcessor(new ContextSanitizer()))(new LogRecord(
