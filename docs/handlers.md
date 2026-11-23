@@ -19,9 +19,13 @@ Unlabelled arbitrary secrets must be supplied as known literals or sensitive
 context; the sanitizer cannot infer every application-specific credential.
 
 The `pass` shorthand matches key components such as `DB_PASS` and `smtpPass`,
-including common compact aliases such as `dbpass` and `userpass`. Diagnostic keys
-such as `bypass` and `tests_passed` retain their values and do not add those values
-to the known secrets. Passwords, passphrases, tokens and WordPress session cookies
+including common compact aliases such as `dbpass` and `userpass`. The components
+`pw`, `auth`, `key`, `jwt`, `otp` and `signature` match the same way, covering
+`PHP_AUTH_PW`, WordPress reset keys (`key`, `rp_key`, `user_activation_key`) and
+names such as `ENCRYPTION_KEY`; this also masks non-secret names like `meta_key`.
+A key named exactly `code` is masked, while `status_code` and `error_code` are not.
+Diagnostic keys such as `bypass` and `tests_passed` retain their values and do not
+add those values to the known secrets. Passwords, passphrases, tokens and WordPress session cookies
 remain masked, including known short credential values.
 
 Exceptions retain sanitized messages, file/line and stack frame locations and call
